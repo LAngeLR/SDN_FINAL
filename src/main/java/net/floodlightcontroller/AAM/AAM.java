@@ -10,13 +10,14 @@ import net.floodlightcontroller.core.module.IFloodlightModule;
 import net.floodlightcontroller.core.module.IFloodlightService;
 import net.floodlightcontroller.core.types.Host;
 import net.floodlightcontroller.packet.Ethernet;
+import net.floodlightcontroller.packet.IPacket;
 import net.floodlightcontroller.packet.IPv4;
-import net.floodlightcontroller.util.OFMessageUtils;
+import net.floodlightcontroller.packet.TCP;
 import org.projectfloodlight.openflow.protocol.OFMessage;
-import org.projectfloodlight.openflow.protocol.OFPacketIn;
 import org.projectfloodlight.openflow.protocol.OFType;
+import org.projectfloodlight.openflow.types.EthType;
 import org.projectfloodlight.openflow.types.IPv4Address;
-import org.projectfloodlight.openflow.types.OFPort;
+import org.projectfloodlight.openflow.types.IpProtocol;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -26,6 +27,9 @@ public class AAM implements IOFMessageListener, IFloodlightModule {
     protected static Logger logger;
     protected IFloodlightProviderService floodlightProvider;
     protected HashMap<String,ArrayList<Host>> sesiones;
+    protected Long MACWebServer;
+    protected IPv4Address IPv4WebServer;
+    protected int PortWebServer = 8080;
 
     @Override
     public String getName() {
@@ -79,6 +83,7 @@ public class AAM implements IOFMessageListener, IFloodlightModule {
         switch (msg.getType()){
             case PACKET_IN:
                 boolean estaEnSesion = false;
+
                 Ethernet eth = IFloodlightProviderService.bcStore.get(cntx, IFloodlightProviderService.CONTEXT_PI_PAYLOAD);
                 IPv4 ip = (IPv4) eth.getPayload();
 
@@ -88,7 +93,7 @@ public class AAM implements IOFMessageListener, IFloodlightModule {
                 //Detecto el SW
                 String DPID_SW = sw.getId().toString();
 
-                //Detecto el OFPort
+                //Detecto el OFPort -->PREGUNTAR
                 int portSW = 3;
 
                 //Detecto la IP
@@ -97,29 +102,68 @@ public class AAM implements IOFMessageListener, IFloodlightModule {
                 //Creo un host
                 Host host = new Host(DPID_SW,sourceMAC,portSW,sourceIP);
 
+                logger.info("--------------------------------------------------------------------------------------------------------------");
                 logger.info("Se ha detectado un host conectado: MAC: "+sourceMAC+" /DPID_SW: "+DPID_SW+" /port_SW: "+portSW+"/ IP:"+sourceIP);
+                logger.info("--------------------------------------------------------------------------------------------------------------");
 
-                //Collection<ArrayList<Host>> hosts = sesiones.values();
-                for(ArrayList<Host> hostsHelper : sesiones.values()){
-                    if(hostsHelper.contains(host)){
-                        estaEnSesion = true;
-                        break;
+
+                if(!ip.equals(IPv4WebServer) && !sourceMAC.equals(MACWebServer)){
+                    for(ArrayList<Host> sesiones : sesiones.values()){
+                        if(sesiones.contains(host)){
+                            estaEnSesion = true;
+                            break;
+                        }
                     }
                 }
+
 
                 if(estaEnSesion){
                     //Esta en sesion el usuario
 
                 }else{
-                    //significa usuario nuevo o cerro sesion anteriomente por que no tiene una sesion activa
-                    //no esta autenticado
-	                //lee trafico
-                    //if web server:
-                    // else:
-		            //no responde - drop
+                    //significa usuario nuevo o cerro sesion anteriomente por lo que no tiene una sesion activa -> no esta autenticado
+                    if(eth.getEtherType().equals(EthType.IPv4)){
+                        if(ip.getProtocol().equals(IpProtocol.TCP)){
+                            TCP tcp = (TCP) ip.getPayload();
+
+                            //HOST -----> SYN----> SERVER
+                            if(tcp.getFlags() == (short) 0x02){
+                                //Detecto el destination Port
+                                int destPort = tcp.getDestinationPort().getPort(); //8080
+
+                                //Detecto la MAC
+                                Long destMAC = eth.getDestinationMACAddress().getLong();
+
+                                //Detecto la IP
+                                IPv4Address destIP = ip.getDestinationAddress();
+
+                                if(destPort==PortWebServer && destMAC.equals(MACWebServer) && destIP.equals(IPv4WebServer)){
+
+                                    //Creo PACKET-OUT
+
+
+                                }else{
+                                    logger.info("El puerto no es 8080 o la MAC o la IP no es la del servidor");
+                                }
+
+                            }
+
+                            //Falta ver los casos de ACK y SYN+ACK
+
+
+
+
+                        }else{
+                            logger.info("Trafico no aceptado");
+                        }
+                    }else{
+                        logger.info("Trafico no aceptado");
+                    }
 
                 }
 
+                //https://wiki.wireshark.org/SampleCaptures#hypertext-transport-protocol-http
+                //https://www.firewall.cx/networking-topics/protocols/tcp/136-tcp-flag-options.html
 
                 break;
             default:
