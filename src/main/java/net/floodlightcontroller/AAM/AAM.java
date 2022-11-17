@@ -82,7 +82,7 @@ public class AAM implements IOFMessageListener, IFloodlightModule {
     public Command receive(IOFSwitch sw, OFMessage msg, FloodlightContext cntx) {
         switch (msg.getType()){
             case PACKET_IN:
-                boolean estaEnSesion = false;
+                /*boolean estaEnSesion = false;
 
                 Ethernet eth = IFloodlightProviderService.bcStore.get(cntx, IFloodlightProviderService.CONTEXT_PI_PAYLOAD);
                 IPv4 ip = (IPv4) eth.getPayload();
@@ -164,7 +164,7 @@ public class AAM implements IOFMessageListener, IFloodlightModule {
                 }
 
                 //https://wiki.wireshark.org/SampleCaptures#hypertext-transport-protocol-http
-                //https://www.firewall.cx/networking-topics/protocols/tcp/136-tcp-flag-options.html
+                //https://www.firewall.cx/networking-topics/protocols/tcp/136-tcp-flag-options.html*/
 
                 break;
             default:

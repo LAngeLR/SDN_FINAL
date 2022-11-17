@@ -24,6 +24,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import net.floodlightcontroller.core.types.Host;
 import org.projectfloodlight.openflow.protocol.OFFactories;
 import org.projectfloodlight.openflow.protocol.OFMessage;
 import org.projectfloodlight.openflow.protocol.OFPacketIn;
@@ -82,6 +83,12 @@ IFloodlightModule {
 	protected IStorageSourceService storageSource;
 	protected IRestApiService restApi;
 	protected static Logger logger;
+	//-----------------------------------------------------------------------------------------------------------------
+	protected HashMap<String,ArrayList<Host>> sesiones;
+	protected String MACWebServer;
+	protected IPv4Address IPv4WebServer;
+	protected int PortWebServer = 8080;
+	//-----------------------------------------------------------------------------------------------------------------
 
 	protected List<FirewallRule> rules; // protected by synchronized
 	protected boolean enabled;
@@ -282,6 +289,10 @@ IFloodlightModule {
 		rules = new ArrayList<FirewallRule>();
 		logger = LoggerFactory.getLogger(Firewall.class);
 
+		//------------------------------------------------------------------------------------------------------------------------
+		sesiones = new HashMap<>();
+		//------------------------------------------------------------------------------------------------------------------------
+
 		// start disabled
 		enabled = false;
 	}
@@ -302,6 +313,12 @@ IFloodlightModule {
 
 	@Override
 	public Command receive(IOFSwitch sw, OFMessage msg, FloodlightContext cntx) {
+		//------------------------------------------------------------------------------------------------------------------------
+		logger.info("---------------------------------------");
+		logger.info("Entro al recive antes del if");
+		logger.info("---------------------------------------");
+		//------------------------------------------------------------------------------------------------------------------------
+
 		if (!this.enabled) {
 			return Command.CONTINUE;
 		}
@@ -525,11 +542,11 @@ IFloodlightModule {
 		return rmp;
 	}
 
-	/**
+	/*/**
 	 * Checks whether an IP address is a broadcast address or not (determines
 	 * using subnet mask)
 	 * 
-	 * @param IPAddress
+	 * @param
 	 *            the IP address to check
 	 * @return true if it is a broadcast address, false otherwise
 	 */
@@ -573,6 +590,118 @@ IFloodlightModule {
 			}
 			return Command.CONTINUE;
 		}
+
+		//------------------------------------------------------------------------------------------------------------------------
+		boolean estaEnSesion = false;
+
+		IPv4 ip = (IPv4) eth.getPayload();
+
+		//Detecto la MAC
+		String sourceMAC= eth.getSourceMACAddress().toString();
+
+		//Detecto el SW
+		String DPID_SW = sw.getId().toString();
+
+		//Detecto el OFPort -->PREGUNTAR
+		int portSW = inPort.getPortNumber();
+
+		//Detecto la IP
+		IPv4Address sourceIP = ip.getSourceAddress();
+
+		//Creo un host
+		Host host = new Host(DPID_SW,sourceMAC,portSW,sourceIP);
+
+		logger.info("--------------------------------------------------------------------------------------------------------------");
+		logger.info("Se ha detectado un host conectado: MAC: "+sourceMAC+" /DPID_SW: "+DPID_SW+" /port_SW: "+portSW+"/ IP:"+sourceIP);
+
+
+		if(!ip.equals(IPv4WebServer) && !sourceMAC.equals(MACWebServer)){
+			if(!sesiones.isEmpty()){
+				for(ArrayList<Host> sesiones : sesiones.values()){
+					if(sesiones.contains(host)){
+						estaEnSesion = true;
+						break;
+					}
+				}
+			}
+		}
+
+
+		if(estaEnSesion){
+			//Esta en sesion el usuario
+
+		}else{
+			//significa usuario nuevo o cerro sesion anteriomente por lo que no tiene una sesion activa -> no esta autenticado
+			if(eth.getEtherType().equals(EthType.IPv4)){
+				if(ip.getProtocol().equals(IpProtocol.TCP)){
+					TCP tcp = (TCP) ip.getPayload();
+
+					if(sourceMAC.equals(MACWebServer) && sourceIP.equals(IPv4WebServer)){
+						logger.info("--------------------------------------------------------------------------------------------------------------");
+						logger.info("DOING FORWARDING");
+						logger.info("Trafico aceptado del server al host - Es TCP");
+
+					}else{
+						//Detecto el destination Port
+						int destPort = tcp.getDestinationPort().getPort(); //8080
+
+						//Detecto la MAC destino
+						String destMAC = eth.getDestinationMACAddress().toString();
+
+						//Detecto la IP destino
+						IPv4Address destIP = ip.getDestinationAddress();
+
+						if(destPort==PortWebServer && destMAC.equals(MACWebServer) && destIP.equals(IPv4WebServer)){
+							logger.info("--------------------------------------------------------------------------------------------------------------");
+							logger.info("DOING FORWARDING");
+							logger.info("Trafico aceptado del host al server - Es TCP");
+						}else{
+							logger.info("--------------------------------------------------------------------------------------------------------------");
+							logger.info("DOING DROP");
+							logger.info("Trafico no aceptado del host al servidor - No es el servidor de autenticacion");
+						}
+					}
+
+					/*//HOST -----> SYN----> SERVER
+					if(tcp.getFlags() == (short) 0x02){
+						//Detecto el destination Port
+						int destPort = tcp.getDestinationPort().getPort(); //8080
+
+						//Detecto la MAC
+						Long destMAC = eth.getDestinationMACAddress().getLong();
+
+						//Detecto la IP
+						IPv4Address destIP = ip.getDestinationAddress();
+
+						if(destPort==PortWebServer && destMAC.equals(MACWebServer) && destIP.equals(IPv4WebServer)){
+
+							//Creo PACKET-OUT
+
+
+						}else{
+							logger.info("El puerto no es 8080 o la MAC o la IP no es la del servidor");
+						}
+
+					}
+
+					//Falta ver los casos de ACK y SYN+ACK*/
+
+
+
+
+				}else{
+					logger.info("--------------------------------------------------------------------------------------------------------------");
+					logger.info("DOING DROP");
+					logger.info("Trafico no aceptado  - No es TCP");
+				}
+			}else{
+				logger.info("Trafico no aceptado 1");
+			}
+		}
+
+		//------------------------------------------------------------------------------------------------------------------------
+
+
 		/*
 		 * ARP response (unicast) can be let through without filtering through
 		 * rules by uncommenting the code below
