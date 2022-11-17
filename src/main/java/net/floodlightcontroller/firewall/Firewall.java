@@ -314,26 +314,30 @@ IFloodlightModule {
 	@Override
 	public Command receive(IOFSwitch sw, OFMessage msg, FloodlightContext cntx) {
 		//------------------------------------------------------------------------------------------------------------------------
-		logger.info("---------------------------------------");
-		logger.info("Entro al recive antes del if");
-		logger.info("---------------------------------------");
-		//------------------------------------------------------------------------------------------------------------------------
-
-		if (!this.enabled) {
+		/*if (!this.enabled) {
 			return Command.CONTINUE;
-		}
-
+		}*/
+		//------------------------------------------------------------------------------------------------------------------------
 		switch (msg.getType()) {
 		case PACKET_IN:
 			IRoutingDecision decision = null;
 			if (cntx != null) {
 				decision = IRoutingDecision.rtStore.get(cntx, IRoutingDecision.CONTEXT_DECISION);
+
+				//------------------------------------------------------------------------------------------------------------------------
+				logger.info("Entro justo antes de enviar al process packet in del firewall");
+				//------------------------------------------------------------------------------------------------------------------------
+
 				return this.processPacketInMessage(sw, (OFPacketIn) msg, decision, cntx);
 			}
 			break;
 		default:
 			break;
 		}
+
+		//------------------------------------------------------------------------------------------------------------------------
+		logger.info("Me salgo del if y hablo con forwarding");
+		//------------------------------------------------------------------------------------------------------------------------
 
 		return Command.CONTINUE;
 	}
@@ -562,6 +566,9 @@ IFloodlightModule {
 
 		// Allowing L2 broadcast + ARP broadcast request (also deny malformed
 		// broadcasts -> L2 broadcast + L3 unicast)
+		//------------------------------------------------------------------------------------------------------------------------
+		logger.info("llego mi paquete- estoy justo antes de saber si es de broadcast");
+		//------------------------------------------------------------------------------------------------------------------------
 		if (eth.isBroadcast() == true) {
 			boolean allowBroadcast = true;
 			// the case to determine if we have L2 broadcast + L3 unicast (L3 broadcast default set to /24 or 255.255.255.0)
@@ -590,7 +597,8 @@ IFloodlightModule {
 			}
 			return Command.CONTINUE;
 		}
-
+		//------------------------------------------------------------------------------------------------------------------------
+		logger.info("mi trafico no es de broadcast");
 		//------------------------------------------------------------------------------------------------------------------------
 		boolean estaEnSesion = false;
 
