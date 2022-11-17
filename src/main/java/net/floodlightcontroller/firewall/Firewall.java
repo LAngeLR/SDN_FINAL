@@ -568,6 +568,7 @@ IFloodlightModule {
 		// broadcasts -> L2 broadcast + L3 unicast)
 		//------------------------------------------------------------------------------------------------------------------------
 		logger.info("llego mi paquete - estoy justo antes de saber si es de broadcast");
+		logger.info(eth.getSourceMACAddress().toString());
 		//------------------------------------------------------------------------------------------------------------------------
 		if (eth.isBroadcast() == true) {
 			boolean allowBroadcast = true;
