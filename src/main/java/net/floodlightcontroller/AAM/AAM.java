@@ -27,7 +27,7 @@ public class AAM implements IOFMessageListener, IFloodlightModule {
     protected static Logger logger;
     protected IFloodlightProviderService floodlightProvider;
     protected HashMap<String,ArrayList<Host>> sesiones;
-    protected Long MACWebServer;
+    protected String MACWebServer;
     protected IPv4Address IPv4WebServer;
     protected int PortWebServer = 8080;
 
@@ -88,7 +88,7 @@ public class AAM implements IOFMessageListener, IFloodlightModule {
                 IPv4 ip = (IPv4) eth.getPayload();
 
                 //Detecto la MAC
-                Long sourceMAC= eth.getSourceMACAddress().getLong();
+                String sourceMAC= eth.getSourceMACAddress().toString();
 
                 //Detecto el SW
                 String DPID_SW = sw.getId().toString();
@@ -104,14 +104,15 @@ public class AAM implements IOFMessageListener, IFloodlightModule {
 
                 logger.info("--------------------------------------------------------------------------------------------------------------");
                 logger.info("Se ha detectado un host conectado: MAC: "+sourceMAC+" /DPID_SW: "+DPID_SW+" /port_SW: "+portSW+"/ IP:"+sourceIP);
-                logger.info("--------------------------------------------------------------------------------------------------------------");
 
 
                 if(!ip.equals(IPv4WebServer) && !sourceMAC.equals(MACWebServer)){
-                    for(ArrayList<Host> sesiones : sesiones.values()){
-                        if(sesiones.contains(host)){
-                            estaEnSesion = true;
-                            break;
+                    if(!sesiones.isEmpty()){
+                        for(ArrayList<Host> sesiones : sesiones.values()){
+                            if(sesiones.contains(host)){
+                                estaEnSesion = true;
+                                break;
+                            }
                         }
                     }
                 }
@@ -154,10 +155,10 @@ public class AAM implements IOFMessageListener, IFloodlightModule {
 
 
                         }else{
-                            logger.info("Trafico no aceptado");
+                            logger.info("Trafico no aceptado 2");
                         }
                     }else{
-                        logger.info("Trafico no aceptado");
+                        logger.info("Trafico no aceptado 1");
                     }
 
                 }

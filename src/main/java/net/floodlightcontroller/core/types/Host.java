@@ -6,12 +6,12 @@ import org.projectfloodlight.openflow.types.OFPort;
 
 public class Host {
     private String DPID_SW;
-    private Long MAC;
+    private String MAC;
     private int portSW;
     private IPv4Address IP;
 
 
-    public Host(String SW, Long MAC, int portSW, IPv4Address IP) {
+    public Host(String SW, String MAC, int portSW, IPv4Address IP) {
         this.DPID_SW = SW;
         this.MAC = MAC;
         this.portSW = portSW;
@@ -26,11 +26,11 @@ public class Host {
         this.DPID_SW = SW;
     }
 
-    public Long getMAC() {
+    public String getMAC() {
         return MAC;
     }
 
-    public void setMAC(Long MAC) {
+    public void setMAC(String MAC) {
         this.MAC = MAC;
     }
 
