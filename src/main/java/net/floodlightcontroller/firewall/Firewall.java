@@ -567,7 +567,7 @@ IFloodlightModule {
 		// Allowing L2 broadcast + ARP broadcast request (also deny malformed
 		// broadcasts -> L2 broadcast + L3 unicast)
 		//------------------------------------------------------------------------------------------------------------------------
-		logger.info("llego mi paquete- estoy justo antes de saber si es de broadcast");
+		logger.info("llego mi paquete - estoy justo antes de saber si es de broadcast");
 		//------------------------------------------------------------------------------------------------------------------------
 		if (eth.isBroadcast() == true) {
 			boolean allowBroadcast = true;
@@ -595,6 +595,11 @@ IFloodlightModule {
 						IRoutingDecision.RoutingAction.DROP);
 				decision.addToContext(cntx);
 			}
+			//------------------------------------------------------------------------------------------------------------------------
+			logger.info("mi trafico es de broadcast");
+			//------------------------------------------------------------------------------------------------------------------------
+
+
 			return Command.CONTINUE;
 		}
 		//------------------------------------------------------------------------------------------------------------------------
@@ -602,73 +607,78 @@ IFloodlightModule {
 		//------------------------------------------------------------------------------------------------------------------------
 		boolean estaEnSesion = false;
 
-		IPv4 ip = (IPv4) eth.getPayload();
+		if(!eth.getEtherType().equals(EthType.ARP)){
+			//------------------------------------------------------------------------------------------------------------------------
+			logger.info("mi trafico no es ARP");
+			//------------------------------------------------------------------------------------------------------------------------
 
-		//Detecto la MAC
-		String sourceMAC= eth.getSourceMACAddress().toString();
+			IPv4 ip = (IPv4) eth.getPayload();
 
-		//Detecto el SW
-		String DPID_SW = sw.getId().toString();
+			//Detecto la MAC
+			String sourceMAC= eth.getSourceMACAddress().toString();
 
-		//Detecto el OFPort -->PREGUNTAR
-		int portSW = inPort.getPortNumber();
+			//Detecto el SW
+			String DPID_SW = sw.getId().toString();
 
-		//Detecto la IP
-		IPv4Address sourceIP = ip.getSourceAddress();
+			//Detecto el OFPort -->PREGUNTAR
+			int portSW = inPort.getPortNumber();
 
-		//Creo un host
-		Host host = new Host(DPID_SW,sourceMAC,portSW,sourceIP);
+			//Detecto la IP
+			IPv4Address sourceIP = ip.getSourceAddress();
 
-		logger.info("--------------------------------------------------------------------------------------------------------------");
-		logger.info("Se ha detectado un host conectado: MAC: "+sourceMAC+" /DPID_SW: "+DPID_SW+" /port_SW: "+portSW+"/ IP:"+sourceIP);
+			//Creo un host
+			Host host = new Host(DPID_SW,sourceMAC,portSW,sourceIP);
+
+			logger.info("--------------------------------------------------------------------------------------------------------------");
+			logger.info("Se ha detectado un host conectado: MAC: "+sourceMAC+" /DPID_SW: "+DPID_SW+" /port_SW: "+portSW+"/ IP:"+sourceIP);
 
 
-		if(!ip.equals(IPv4WebServer) && !sourceMAC.equals(MACWebServer)){
-			if(!sesiones.isEmpty()){
-				for(ArrayList<Host> sesiones : sesiones.values()){
-					if(sesiones.contains(host)){
-						estaEnSesion = true;
-						break;
+			if(!ip.equals(IPv4WebServer) && !sourceMAC.equals(MACWebServer)){
+				if(!sesiones.isEmpty()){
+					for(ArrayList<Host> sesiones : sesiones.values()){
+						if(sesiones.contains(host)){
+							estaEnSesion = true;
+							break;
+						}
 					}
 				}
 			}
-		}
 
 
-		if(estaEnSesion){
-			//Esta en sesion el usuario
+			if(estaEnSesion){
+				//Esta en sesion el usuario
 
-		}else{
-			//significa usuario nuevo o cerro sesion anteriomente por lo que no tiene una sesion activa -> no esta autenticado
-			if(eth.getEtherType().equals(EthType.IPv4)){
-				if(ip.getProtocol().equals(IpProtocol.TCP)){
-					TCP tcp = (TCP) ip.getPayload();
+			}else{
+				//significa usuario nuevo o cerro sesion anteriomente por lo que no tiene una sesion activa -> no esta autenticado
+				if(eth.getEtherType().equals(EthType.IPv4)){
+					if(ip.getProtocol().equals(IpProtocol.TCP)){
+						TCP tcp = (TCP) ip.getPayload();
 
-					if(sourceMAC.equals(MACWebServer) && sourceIP.equals(IPv4WebServer)){
-						logger.info("--------------------------------------------------------------------------------------------------------------");
-						logger.info("DOING FORWARDING");
-						logger.info("Trafico aceptado del server al host - Es TCP");
-
-					}else{
-						//Detecto el destination Port
-						int destPort = tcp.getDestinationPort().getPort(); //8080
-
-						//Detecto la MAC destino
-						String destMAC = eth.getDestinationMACAddress().toString();
-
-						//Detecto la IP destino
-						IPv4Address destIP = ip.getDestinationAddress();
-
-						if(destPort==PortWebServer && destMAC.equals(MACWebServer) && destIP.equals(IPv4WebServer)){
+						if(sourceMAC.equals(MACWebServer) && sourceIP.equals(IPv4WebServer)){
 							logger.info("--------------------------------------------------------------------------------------------------------------");
 							logger.info("DOING FORWARDING");
-							logger.info("Trafico aceptado del host al server - Es TCP");
+							logger.info("Trafico aceptado del server al host - Es TCP");
+
 						}else{
-							logger.info("--------------------------------------------------------------------------------------------------------------");
-							logger.info("DOING DROP");
-							logger.info("Trafico no aceptado del host al servidor - No es el servidor de autenticacion");
+							//Detecto el destination Port
+							int destPort = tcp.getDestinationPort().getPort(); //8080
+
+							//Detecto la MAC destino
+							String destMAC = eth.getDestinationMACAddress().toString();
+
+							//Detecto la IP destino
+							IPv4Address destIP = ip.getDestinationAddress();
+
+							if(destPort==PortWebServer && destMAC.equals(MACWebServer) && destIP.equals(IPv4WebServer)){
+								logger.info("--------------------------------------------------------------------------------------------------------------");
+								logger.info("DOING FORWARDING");
+								logger.info("Trafico aceptado del host al server - Es TCP");
+							}else{
+								logger.info("--------------------------------------------------------------------------------------------------------------");
+								logger.info("DOING DROP");
+								logger.info("Trafico no aceptado del host al servidor - No es el servidor de autenticacion");
+							}
 						}
-					}
 
 					/*//HOST -----> SYN----> SERVER
 					if(tcp.getFlags() == (short) 0x02){
@@ -697,15 +707,21 @@ IFloodlightModule {
 
 
 
+					}else{
+						logger.info("--------------------------------------------------------------------------------------------------------------");
+						logger.info("DOING DROP");
+						logger.info("Trafico no aceptado  - No es TCP");
+					}
 				}else{
-					logger.info("--------------------------------------------------------------------------------------------------------------");
-					logger.info("DOING DROP");
-					logger.info("Trafico no aceptado  - No es TCP");
+					logger.info("Trafico no aceptado 1");
 				}
-			}else{
-				logger.info("Trafico no aceptado 1");
 			}
+		}else{
+			//------------------------------------------------------------------------------------------------------------------------
+			logger.info("mi trafico es ARP");
+			//------------------------------------------------------------------------------------------------------------------------
 		}
+
 
 		//------------------------------------------------------------------------------------------------------------------------
 
