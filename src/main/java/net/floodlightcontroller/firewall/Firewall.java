@@ -554,7 +554,7 @@ IFloodlightModule {
 		OFPort inPort = (pi.getVersion().compareTo(OFVersion.OF_12) < 0 ? pi.getInPort() : pi.getMatch().get(MatchField.IN_PORT));
 
 		logger.info("--------------------------INICIO DEL PACKET IN-----------------------");
-
+		logger.info("EL TAMAÑO DEL ARREGLO DE HOSTS CONECTADOS ES : "+conectados.size());
 		// Allowing L2 broadcast + ARP broadcast request (also deny malformed broadcasts -> L2 broadcast + L3 unicast)
 		logger.info("1.SERA DE BROADCAST MI PAQUETE?");
 		if (eth.isBroadcast() == true) {
@@ -596,7 +596,7 @@ IFloodlightModule {
 			return Command.CONTINUE;
 		}
 
-		logger.info("5.TU TRAFICO NO ES DE BROADCAST.TIENE COMO ETHERTYPE:"+eth.getEtherType().toString() + " . LA SOURCE MAC ES: "+eth.getEtherType().toString());
+		logger.info("5.TU TRAFICO NO ES DE BROADCAST.TIENE COMO ETHERTYPE:"+eth.getEtherType().toString());
 		boolean estaEnSesion = false;
 
 		if(!eth.getEtherType().equals(EthType.ARP) && eth.getEtherType().equals(EthType.IPv4)){
@@ -647,7 +647,7 @@ IFloodlightModule {
 					logger.info("9.HOST CON IP:"+sourceIP+" AÑADIDO");
 					conectados.add(host);
 				}
-
+				logger.info("EL TAMAÑO DEL ARREGLO DE HOSTS CONECTADOS ES : "+conectados.size());
 				if(ip.getProtocol().equals(IpProtocol.TCP)){
 					TCP tcp = (TCP) ip.getPayload();
 
