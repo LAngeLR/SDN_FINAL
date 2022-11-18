@@ -85,6 +85,7 @@ IFloodlightModule {
 	protected static Logger logger;
 	//-----------------------------------------------------------------------------------------------------------------
 	protected HashMap<String,ArrayList<Host>> sesiones;
+	protected ArrayList<Host> hosts;
 	protected String MACWebServer;
 	protected IPv4Address IPv4WebServer;
 	protected int PortWebServer = 8080;
@@ -291,6 +292,7 @@ IFloodlightModule {
 
 		//------------------------------------------------------------------------------------------------------------------------
 		sesiones = new HashMap<>();
+		hosts = new ArrayList<>();
 		//------------------------------------------------------------------------------------------------------------------------
 
 		// start disabled
@@ -611,10 +613,9 @@ IFloodlightModule {
 		//------------------------------------------------------------------------------------------------------------------------
 		boolean estaEnSesion = false;
 
-		if(!eth.getEtherType().equals(EthType.ARP)){
+		if(!eth.getEtherType().equals(EthType.ARP) && eth.getEtherType().equals(EthType.IPv4)){
 			//------------------------------------------------------------------------------------------------------------------------
 			logger.info("mi trafico no es ARP");
-			logger.info(eth.getEtherType().toString());
 			//------------------------------------------------------------------------------------------------------------------------
 
 			IPv4 ip = (IPv4) eth.getPayload();
@@ -678,6 +679,9 @@ IFloodlightModule {
 								logger.info("--------------------------------------------------------------------------------------------------------------");
 								logger.info("DOING FORWARDING");
 								logger.info("Trafico aceptado del host al server - Es TCP");
+
+								hosts.add(host);
+								
 							}else{
 								logger.info("--------------------------------------------------------------------------------------------------------------");
 								logger.info("DOING DROP");
