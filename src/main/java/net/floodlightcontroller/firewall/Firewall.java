@@ -643,10 +643,23 @@ IFloodlightModule {
 
 			}else{
 				//significa usuario nuevo o cerro sesion anteriomente por lo que no tiene una sesion activa -> no esta autenticado
-				if(!conectados.contains(host) && !sourceMAC.equals(MACWebServer) && !sourceIP.equals(IPv4WebServer)){
+				/*if(!conectados.contains(host) && !sourceMAC.equals(MACWebServer) && !sourceIP.equals(IPv4WebServer)){
 					logger.info("9.HOST CON IP:"+sourceIP+" AÑADIDO");
 					conectados.add(host);
+				}*/
+				if(!sourceMAC.equals(MACWebServer) && !sourceIP.equals(IPv4WebServer)){
+					for(Host host1 : conectados){
+						if(host1.getIP().equals(sourceIP) && host1.getMAC().equals(sourceMAC) && (host1.getPortSW() == portSW) && host1.getSW().equals(DPID_SW)){
+
+						}
+						else{
+							logger.info("9.HOST CON IP:"+sourceIP+" AÑADIDO");
+							conectados.add(host);
+						}
+					}
 				}
+
+
 				logger.info("EL TAMAÑO DEL ARREGLO DE HOSTS CONECTADOS ES : "+conectados.size());
 				if(ip.getProtocol().equals(IpProtocol.TCP)){
 					TCP tcp = (TCP) ip.getPayload();
