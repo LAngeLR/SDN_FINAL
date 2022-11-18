@@ -648,14 +648,17 @@ IFloodlightModule {
 					conectados.add(host);
 				}*/
 				if(!sourceMAC.equals(MACWebServer) && !sourceIP.equals(IPv4WebServer)){
+					boolean igual = false;
 					for(Host host1 : conectados){
 						if(host1.getIP().equals(sourceIP) && host1.getMAC().equals(sourceMAC) && (host1.getPortSW() == portSW) && host1.getSW().equals(DPID_SW)){
+							igual = true;
+							break;
+						}
+					}
 
-						}
-						else{
-							logger.info("9.HOST CON IP:"+sourceIP+" AÑADIDO");
-							conectados.add(host);
-						}
+					if(!igual){
+						logger.info("9.HOST CON IP:"+sourceIP+" AÑADIDO");
+						conectados.add(host);
 					}
 				}
 
