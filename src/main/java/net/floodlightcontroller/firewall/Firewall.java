@@ -85,7 +85,7 @@ IFloodlightModule {
 	protected static Logger logger;
 	//-----------------------------------------------------------------------------------------------------------------
 	protected HashMap<String,ArrayList<Host>> sesiones;
-	protected ArrayList<Host> hosts;
+	protected ArrayList<Host> conectados;
 	protected String MACWebServer;
 	protected IPv4Address IPv4WebServer;
 	protected int PortWebServer = 8080;
@@ -292,7 +292,7 @@ IFloodlightModule {
 
 		//------------------------------------------------------------------------------------------------------------------------
 		sesiones = new HashMap<>();
-		hosts = new ArrayList<>();
+		conectados = new ArrayList<>();
 		//------------------------------------------------------------------------------------------------------------------------
 
 		// start disabled
@@ -315,11 +315,6 @@ IFloodlightModule {
 
 	@Override
 	public Command receive(IOFSwitch sw, OFMessage msg, FloodlightContext cntx) {
-		//------------------------------------------------------------------------------------------------------------------------
-		/*if (!this.enabled) {
-			return Command.CONTINUE;
-		}*/
-		//------------------------------------------------------------------------------------------------------------------------
 		switch (msg.getType()) {
 		case PACKET_IN:
 			IRoutingDecision decision = null;
@@ -558,17 +553,12 @@ IFloodlightModule {
 		Ethernet eth = IFloodlightProviderService.bcStore.get(cntx, IFloodlightProviderService.CONTEXT_PI_PAYLOAD);
 		OFPort inPort = (pi.getVersion().compareTo(OFVersion.OF_12) < 0 ? pi.getInPort() : pi.getMatch().get(MatchField.IN_PORT));
 
-		// Allowing L2 broadcast + ARP broadcast request (also deny malformed
-		// broadcasts -> L2 broadcast + L3 unicast)
-		//------------------------------------------------------------------------------------------------------------------------
-		logger.info("SERA DE BROADCAST MI PAQUETE?");
-		logger.info(">>SOURCE MAC: "+eth.getSourceMACAddress().toString());
-		//------------------------------------------------------------------------------------------------------------------------
+		logger.info("--------------------------INICIO DEL PACKET IN-----------------------");
+
+		// Allowing L2 broadcast + ARP broadcast request (also deny malformed broadcasts -> L2 broadcast + L3 unicast)
+		logger.info("1.SERA DE BROADCAST MI PAQUETE?");
 		if (eth.isBroadcast() == true) {
-			//------------------------------------------------------------------------------------------------------------------------
-			logger.info(">>ES DE BROADCAST");
-			logger.info(eth.getEtherType().toString());
-			//------------------------------------------------------------------------------------------------------------------------
+			logger.info("2.TU TRAFICO ES DE BROADCAST. DONDE LA SOURCE MAC ES:"+eth.getEtherType().toString());
 			boolean allowBroadcast = true;
 			// the case to determine if we have L2 broadcast + L3 unicast (L3 broadcast default set to /24 or 255.255.255.0)
 			// don't allow this broadcast packet if such is the case (malformed packet)
@@ -585,9 +575,8 @@ IFloodlightModule {
 						IRoutingDecision.RoutingAction.MULTICAST);
 				decision.addToContext(cntx);
 
-				//------------------------------------------------------------------------------------------------------------------------
-				logger.info(">>>>HAGO MULTICAST");
-				//------------------------------------------------------------------------------------------------------------------------
+
+				logger.info("3.SE SETEA COMO ACTION:MULTICAST");
 
 			} else {
 				if (logger.isTraceEnabled()) {
@@ -599,25 +588,19 @@ IFloodlightModule {
 						IRoutingDecision.RoutingAction.DROP);
 				decision.addToContext(cntx);
 
-				//------------------------------------------------------------------------------------------------------------------------
-				logger.info(">>>>HAGO DROP");
-				//------------------------------------------------------------------------------------------------------------------------
+				logger.info("4.SE SETEA COMO ACTION:DROP");
 
 			}
 
+			logger.info("--------------------------------------------------------");
 			return Command.CONTINUE;
 		}
 
-		//------------------------------------------------------------------------------------------------------------------------
-		logger.info(">>NO ES DE BROADCAST");
-		logger.info(eth.getEtherType().toString());
-		//------------------------------------------------------------------------------------------------------------------------
+		logger.info("5.TU TRAFICO NO ES DE BROADCAST.TIENE COMO ETHERTYPE:"+eth.getEtherType().toString() + " . LA SOURCE MAC ES: "+eth.getEtherType().toString());
 		boolean estaEnSesion = false;
 
 		if(!eth.getEtherType().equals(EthType.ARP) && eth.getEtherType().equals(EthType.IPv4)){
-			//------------------------------------------------------------------------------------------------------------------------
-			logger.info("mi trafico no es ARP");
-			//------------------------------------------------------------------------------------------------------------------------
+			logger.info("6.TU TRAFICO NO ES DE ARP");
 
 			IPv4 ip = (IPv4) eth.getPayload();
 
@@ -636,104 +619,115 @@ IFloodlightModule {
 			//Creo un host
 			Host host = new Host(DPID_SW,sourceMAC,portSW,sourceIP);
 
-			logger.info("--------------------------------------------------------------------------------------------------------------");
-			logger.info("Se ha detectado un host conectado: MAC: "+sourceMAC+" /DPID_SW: "+DPID_SW+" /port_SW: "+portSW+"/ IP:"+sourceIP);
+			logger.info("7.SE HA DETECTADO UN HOST CON MAC: "+sourceMAC+" /DPID_SW: "+DPID_SW+" /PORT_SW: "+portSW+"/ IP:"+sourceIP);
 
 
 			if(!ip.equals(IPv4WebServer) && !sourceMAC.equals(MACWebServer)){
-				if(!sesiones.isEmpty()){
-					for(ArrayList<Host> sesiones : sesiones.values()){
-						if(sesiones.contains(host)){
-							estaEnSesion = true;
-							break;
+				if(!conectados.contains(host)){
+					if(!sesiones.isEmpty()){
+						for(ArrayList<Host> sesiones : sesiones.values()){
+							if(sesiones.contains(host)){
+								estaEnSesion = true;
+								break;
+							}
 						}
 					}
+
 				}
 			}
 
 
 			if(estaEnSesion){
 				//Esta en sesion el usuario
+				logger.info("8.EL HOST CON IP: "+sourceIP+" ESTA EN SESION");
 
 			}else{
 				//significa usuario nuevo o cerro sesion anteriomente por lo que no tiene una sesion activa -> no esta autenticado
-				if(eth.getEtherType().equals(EthType.IPv4)){
-					if(ip.getProtocol().equals(IpProtocol.TCP)){
-						TCP tcp = (TCP) ip.getPayload();
+				if(!conectados.contains(host) && !sourceMAC.equals(MACWebServer) && !sourceIP.equals(IPv4WebServer)){
+					logger.info("9.HOST CON IP:"+sourceIP+" AÑADIDO");
+					conectados.add(host);
+				}
 
-						if(sourceMAC.equals(MACWebServer) && sourceIP.equals(IPv4WebServer)){
-							logger.info("--------------------------------------------------------------------------------------------------------------");
-							logger.info("DOING FORWARDING");
-							logger.info("Trafico aceptado del server al host - Es TCP");
+				if(ip.getProtocol().equals(IpProtocol.TCP)){
+					TCP tcp = (TCP) ip.getPayload();
 
-						}else{
-							//Detecto el destination Port
-							int destPort = tcp.getDestinationPort().getPort(); //8080
-
-							//Detecto la MAC destino
-							String destMAC = eth.getDestinationMACAddress().toString();
-
-							//Detecto la IP destino
-							IPv4Address destIP = ip.getDestinationAddress();
-
-							if(destPort==PortWebServer && destMAC.equals(MACWebServer) && destIP.equals(IPv4WebServer)){
-								logger.info("--------------------------------------------------------------------------------------------------------------");
-								logger.info("DOING FORWARDING");
-								logger.info("Trafico aceptado del host al server - Es TCP");
-
-								hosts.add(host);
-								
-							}else{
-								logger.info("--------------------------------------------------------------------------------------------------------------");
-								logger.info("DOING DROP");
-								logger.info("Trafico no aceptado del host al servidor - No es el servidor de autenticacion");
-							}
+					if(sourceMAC.equals(MACWebServer) && sourceIP.equals(IPv4WebServer)){
+						logger.info("10.COMO EL SOURCE ES EL SERVIDOR WEB CON IP:"+sourceIP+" .ENTONCES SE HACE FORWARDING");
+						RuleMatchPair rmp = this.matchWithRule(sw, pi, cntx);
+						FirewallRule rule = rmp.rule;
+						if (rule == null){
+							decision = new RoutingDecision(sw.getId(), inPort,
+									IDeviceService.fcStore.get(cntx, IDeviceService.CONTEXT_SRC_DEVICE),
+									IRoutingDecision.RoutingAction.FORWARD);
+							decision.setMatch(rmp.match);
+							decision.addToContext(cntx);
 						}
+						logger.info("--------------------------------------------------------");
+						return Command.CONTINUE;
 
-					/*//HOST -----> SYN----> SERVER
-					if(tcp.getFlags() == (short) 0x02){
+					}else{
 						//Detecto el destination Port
 						int destPort = tcp.getDestinationPort().getPort(); //8080
 
-						//Detecto la MAC
-						Long destMAC = eth.getDestinationMACAddress().getLong();
+						//Detecto la MAC destino
+						String destMAC = eth.getDestinationMACAddress().toString();
 
-						//Detecto la IP
+						//Detecto la IP destino
 						IPv4Address destIP = ip.getDestinationAddress();
 
 						if(destPort==PortWebServer && destMAC.equals(MACWebServer) && destIP.equals(IPv4WebServer)){
-
-							//Creo PACKET-OUT
-
+							logger.info("11.COMO CUMPLE CON TODO LOS REQUISITOS . SE HACE FORWARDING HACIA EL SERVIDOR DE AUTENTICACION");
+							RuleMatchPair rmp = this.matchWithRule(sw, pi, cntx);
+							FirewallRule rule = rmp.rule;
+							if (rule == null){
+								decision = new RoutingDecision(sw.getId(), inPort,
+										IDeviceService.fcStore.get(cntx, IDeviceService.CONTEXT_SRC_DEVICE),
+										IRoutingDecision.RoutingAction.FORWARD);
+								decision.setMatch(rmp.match);
+								decision.addToContext(cntx);
+							}
+							logger.info("--------------------------------------------------------");
+							return Command.CONTINUE;
 
 						}else{
-							logger.info("El puerto no es 8080 o la MAC o la IP no es la del servidor");
+							logger.info("12.COMO NO ES UN TRAFICO ACEPTADO DEL HOST CON IP:"+sourceIP+" AL SERVIDOR ENTONCES TU ACTION ES NONE");
+							RuleMatchPair rmp = this.matchWithRule(sw, pi, cntx);
+							FirewallRule rule = rmp.rule;
+							if (rule == null){
+								decision = new RoutingDecision(sw.getId(), inPort,
+										IDeviceService.fcStore.get(cntx, IDeviceService.CONTEXT_SRC_DEVICE),
+										IRoutingDecision.RoutingAction.NONE);
+								decision.setMatch(rmp.match);
+								decision.addToContext(cntx);
+							}
+							logger.info("--------------------------------------------------------");
+							return Command.CONTINUE;
 						}
-
 					}
 
-					//Falta ver los casos de ACK y SYN+ACK*/
-
-
-
-
-					}else{
-						logger.info("--------------------------------------------------------------------------------------------------------------");
-						logger.info("DOING DROP");
-						logger.info("Trafico no aceptado  - No es TCP");
-					}
 				}else{
-					logger.info("Trafico no aceptado 1");
+					logger.info("13.TU TRAFICO NO ES TCP POR LO QUE TU ACTION ES NONE OSEA TIPO DROP.EL HOST CON IP: "+sourceIP);
+					RuleMatchPair rmp = this.matchWithRule(sw, pi, cntx);
+					FirewallRule rule = rmp.rule;
+					if (rule == null){
+						decision = new RoutingDecision(sw.getId(), inPort,
+								IDeviceService.fcStore.get(cntx, IDeviceService.CONTEXT_SRC_DEVICE),
+								IRoutingDecision.RoutingAction.NONE);
+						decision.setMatch(rmp.match);
+						decision.addToContext(cntx);
+					}
+					logger.info("--------------------------------------------------------");
+					return Command.CONTINUE;
 				}
 			}
-		}else{
-			//------------------------------------------------------------------------------------------------------------------------
-			logger.info(">>TRAFICO : ARP");
-			//------------------------------------------------------------------------------------------------------------------------
-		}
-		logger.info("-----------------MI CODIGO HASTA ACA-----------------------");
 
-		//------------------------------------------------------------------------------------------------------------------------
+		}else{
+			if(eth.getEtherType().equals(EthType.ARP)){
+				logger.info("14.TU TRAFICO ES ARP Y TIENE COMO ETHERTYPE: "+eth.getEtherType());
+			}else{
+				logger.info("15.TU TRAFICO TIENE COMO ETHERTYPE: "+eth.getEtherType());
+			}
+		}
 
 
 		/*
@@ -749,6 +743,7 @@ IFloodlightModule {
 
 		// check if we have a matching rule for this packet/flow and no decision has been made yet
 		if (decision == null) {
+			logger.info("16.NO HAY UNA DECISION SETEADA");
 			// check if the packet we received matches an existing rule
 			RuleMatchPair rmp = this.matchWithRule(sw, pi, cntx);
 			FirewallRule rule = rmp.rule;
@@ -760,14 +755,12 @@ IFloodlightModule {
 						IRoutingDecision.RoutingAction.DROP);
 				decision.setMatch(rmp.match);
 				decision.addToContext(cntx);
-				logger.info("-----------------TENGO REGLA NULA Y SETEAN ACTION DROP-----------------------");
+				logger.info("17.COMO LA REGLA ES NULL . ENTONCES SE SETEA UN ACTION DE DROP");
 				if (logger.isTraceEnabled()) {
 					if (rule == null) {
 						logger.trace("No firewall rule found for PacketIn={}, blocking flow", pi);
-						logger.info("-----------------ENTRO IF 1-----------------------");
 					} else if (rule.action == FirewallRule.FirewallAction.DROP) {
 						logger.trace("Deny rule={} match for PacketIn={}", rule, pi);
-						logger.info("-----------------ENTRO IF 2-----------------------");
 					}
 				}
 				// Found a rule and the rule is not a drop, so allow the packet
@@ -777,7 +770,7 @@ IFloodlightModule {
 						IRoutingDecision.RoutingAction.FORWARD_OR_FLOOD);
 				decision.setMatch(rmp.match);
 				decision.addToContext(cntx);
-				logger.info("-----------------ENCUENTRAN REGLA Y SETEAN FORWARD O FLOOD-----------------------");
+				logger.info("18.COMO LA REGLA SE ENCUENTRA UN REGLA QUE NO ES DROP ENTONCES SE SETEA UN ACTION DE FORWARD_OR_FLOOD");
 				if (logger.isTraceEnabled()) {
 					logger.trace("Allow rule={} match for PacketIn={}", rule, pi);
 				}
