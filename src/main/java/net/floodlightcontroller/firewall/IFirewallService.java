@@ -17,10 +17,12 @@
 
 package net.floodlightcontroller.firewall;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
 import net.floodlightcontroller.core.module.IFloodlightService;
+import net.floodlightcontroller.core.types.Host;
 
 public interface IFirewallService extends IFloodlightService {
 
@@ -70,4 +72,6 @@ public interface IFirewallService extends IFloodlightService {
      * Deletes a Firewall rule
      */
     public void deleteRule(int ruleid);
+
+    public ArrayList<Host> getBuffer();
 }

@@ -1,9 +1,12 @@
 package net.floodlightcontroller.core.types;
 
 import net.floodlightcontroller.core.IOFSwitch;
+import net.floodlightcontroller.firewall.FirewallConectadosSerializer;
 import org.projectfloodlight.openflow.types.IPv4Address;
 import org.projectfloodlight.openflow.types.OFPort;
 
+
+@JsonSerialize(using= FirewallConectadosSerializer.class)
 public class Host {
     private String DPID_SW;
     private String MAC;

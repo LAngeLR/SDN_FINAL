@@ -797,6 +797,11 @@ IFloodlightModule {
 	}
 
 	@Override
+	public ArrayList<Host> getBuffer() {
+		return conectados;
+	}
+
+	@Override
 	public boolean isEnabled() {
 		return enabled;
 	}

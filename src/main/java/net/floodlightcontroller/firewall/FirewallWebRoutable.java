@@ -33,7 +33,7 @@ public class FirewallWebRoutable implements RestletRoutable {
         router.attach("/module/disable/json",      FirewallDisableResource.class);
         router.attach("/module/subnet-mask/json",  FirewallSubnetMaskResource.class);
         router.attach("/module/storageRules/json", FirewallStorageRulesResource.class);
-
+        router.attach("/R1/conectados/json",       FirewallConectadosResource.class);
         router.attach("/rules/json",               FirewallRulesResource.class);
 
         return router;
