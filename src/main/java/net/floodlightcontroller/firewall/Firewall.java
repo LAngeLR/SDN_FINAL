@@ -681,7 +681,7 @@ IFloodlightModule {
 				logger.info("EL TAMAÑO DEL ARREGLO DE HOSTS CONECTADOS ES : "+conectados.size());
 				if(ip.getProtocol().equals(IpProtocol.TCP)){
 					TCP tcp = (TCP) ip.getPayload();
-
+					logger.info("9.5. EL FLAG DEL TRAFICO TCP ES: "+tcp.getFlags());
 					if(sourceMAC.equals(MACWebServer) && sourceIP.equals(IPv4WebServer)){
 						logger.info("10.COMO EL SOURCE ES EL SERVIDOR WEB CON IP:"+sourceIP+" .ENTONCES SE HACE FORWARDING");
 						RuleMatchPair rmp = this.matchWithRule(sw, pi, cntx);
