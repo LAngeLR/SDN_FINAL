@@ -86,9 +86,12 @@ IFloodlightModule {
 	//-----------------------------------------------------------------------------------------------------------------
 	protected HashMap<String,ArrayList<Host>> sesiones;
 	protected ArrayList<Host> conectados;
-	protected String MACWebServer;
-	protected IPv4Address IPv4WebServer;
+	protected String MACWebServer = "fa:16:3e:70:45:ec";
+	protected String IPv4WebServer = "10.0.0.101";
 	protected int PortWebServer = 8080;
+	protected String MACController = "fa:16:3e:c7:55:5b";
+	protected String IPv4Controller = "192.168.200.10";
+	protected int PortController = 8080;
 	//-----------------------------------------------------------------------------------------------------------------
 
 	protected List<FirewallRule> rules; // protected by synchronized
@@ -558,7 +561,7 @@ IFloodlightModule {
 		// Allowing L2 broadcast + ARP broadcast request (also deny malformed broadcasts -> L2 broadcast + L3 unicast)
 		logger.info("1.SERA DE BROADCAST MI PAQUETE?");
 		if (eth.isBroadcast() == true) {
-			logger.info("2.TU TRAFICO ES DE BROADCAST. DONDE LA SOURCE MAC ES:"+eth.getEtherType().toString());
+			logger.info("2.TU TRAFICO ES DE BROADCAST. DONDE TU ETHERTYPE ES:"+eth.getEtherType().toString());
 			boolean allowBroadcast = true;
 			// the case to determine if we have L2 broadcast + L3 unicast (L3 broadcast default set to /24 or 255.255.255.0)
 			// don't allow this broadcast packet if such is the case (malformed packet)
@@ -570,7 +573,7 @@ IFloodlightModule {
 					logger.trace("Allowing broadcast traffic for PacketIn={}", pi);
 				}
 
-				decision = new RoutingDecision(sw.getId(), inPort, 
+				decision = new RoutingDecision(sw.getId(), inPort,
 						IDeviceService.fcStore.get(cntx, IDeviceService.CONTEXT_SRC_DEVICE),
 						IRoutingDecision.RoutingAction.MULTICAST);
 				decision.addToContext(cntx);
@@ -614,12 +617,28 @@ IFloodlightModule {
 			int portSW = inPort.getPortNumber();
 
 			//Detecto la IP
-			IPv4Address sourceIP = ip.getSourceAddress();
+			String sourceIP = ip.getSourceAddress().toString();
 
 			//Creo un host
 			Host host = new Host(DPID_SW,sourceMAC,portSW,sourceIP);
 
 			logger.info("7.SE HA DETECTADO UN HOST CON MAC: "+sourceMAC+" /DPID_SW: "+DPID_SW+" /PORT_SW: "+portSW+"/ IP:"+sourceIP);
+
+
+			if(sourceMAC.equals(MACController) && sourceIP.equals(IPv4Controller)){
+				logger.info("7.5.COMO EL SOURCE ES EL CONTROLADOR CON IP:"+sourceIP+" SE PERMITE TODO.ENTONCES SE HACE FORWARDING");
+				RuleMatchPair rmp = this.matchWithRule(sw, pi, cntx);
+				FirewallRule rule = rmp.rule;
+				if (rule == null){
+					decision = new RoutingDecision(sw.getId(), inPort,
+							IDeviceService.fcStore.get(cntx, IDeviceService.CONTEXT_SRC_DEVICE),
+							IRoutingDecision.RoutingAction.FORWARD);
+					decision.setMatch(rmp.match);
+					decision.addToContext(cntx);
+				}
+				logger.info("--------------------------------------------------------");
+				return Command.CONTINUE;
+			}
 
 
 			if(!ip.equals(IPv4WebServer) && !sourceMAC.equals(MACWebServer)){
@@ -643,10 +662,6 @@ IFloodlightModule {
 
 			}else{
 				//significa usuario nuevo o cerro sesion anteriomente por lo que no tiene una sesion activa -> no esta autenticado
-				/*if(!conectados.contains(host) && !sourceMAC.equals(MACWebServer) && !sourceIP.equals(IPv4WebServer)){
-					logger.info("9.HOST CON IP:"+sourceIP+" AÑADIDO");
-					conectados.add(host);
-				}*/
 				if(!sourceMAC.equals(MACWebServer) && !sourceIP.equals(IPv4WebServer)){
 					boolean igual = false;
 					for(Host host1 : conectados){
@@ -689,7 +704,7 @@ IFloodlightModule {
 						String destMAC = eth.getDestinationMACAddress().toString();
 
 						//Detecto la IP destino
-						IPv4Address destIP = ip.getDestinationAddress();
+						String destIP = ip.getDestinationAddress().toString();
 
 						if(destPort==PortWebServer && destMAC.equals(MACWebServer) && destIP.equals(IPv4WebServer)){
 							logger.info("11.COMO CUMPLE CON TODO LOS REQUISITOS . SE HACE FORWARDING HACIA EL SERVIDOR DE AUTENTICACION");
@@ -756,6 +771,10 @@ IFloodlightModule {
 		 * FirewallDecision(IRoutingDecision.RoutingAction.FORWARD_OR_FLOOD);
 		 * decision.addToContext(cntx); return Command.CONTINUE; }
 		 */
+		decision = new RoutingDecision(sw.getId(), inPort,
+				IDeviceService.fcStore.get(cntx, IDeviceService.CONTEXT_SRC_DEVICE),
+				IRoutingDecision.RoutingAction.FORWARD_OR_FLOOD);
+		decision.addToContext(cntx);
 
 		// check if we have a matching rule for this packet/flow and no decision has been made yet
 		if (decision == null) {
@@ -766,8 +785,8 @@ IFloodlightModule {
 
 			// Drop the packet if we don't have a rule allowing or dropping it or if we explicitly drop it
 			if (rule == null || rule.action == FirewallRule.FirewallAction.DROP) {
-				decision = new RoutingDecision(sw.getId(), inPort, 
-						IDeviceService.fcStore.get(cntx, IDeviceService.CONTEXT_SRC_DEVICE), 
+				decision = new RoutingDecision(sw.getId(), inPort,
+						IDeviceService.fcStore.get(cntx, IDeviceService.CONTEXT_SRC_DEVICE),
 						IRoutingDecision.RoutingAction.DROP);
 				decision.setMatch(rmp.match);
 				decision.addToContext(cntx);
@@ -781,7 +800,7 @@ IFloodlightModule {
 				}
 				// Found a rule and the rule is not a drop, so allow the packet
 			} else {
-				decision = new RoutingDecision(sw.getId(), inPort, 
+				decision = new RoutingDecision(sw.getId(), inPort,
 						IDeviceService.fcStore.get(cntx, IDeviceService.CONTEXT_SRC_DEVICE),
 						IRoutingDecision.RoutingAction.FORWARD_OR_FLOOD);
 				decision.setMatch(rmp.match);

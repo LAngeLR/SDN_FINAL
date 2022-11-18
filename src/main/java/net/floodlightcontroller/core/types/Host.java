@@ -1,5 +1,6 @@
 package net.floodlightcontroller.core.types;
 
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import net.floodlightcontroller.core.IOFSwitch;
 import net.floodlightcontroller.firewall.FirewallConectadosSerializer;
 import org.projectfloodlight.openflow.types.IPv4Address;
@@ -11,10 +12,10 @@ public class Host {
     private String DPID_SW;
     private String MAC;
     private int portSW;
-    private IPv4Address IP;
+    private String IP;
 
 
-    public Host(String SW, String MAC, int portSW, IPv4Address IP) {
+    public Host(String SW, String MAC, int portSW, String IP) {
         this.DPID_SW = SW;
         this.MAC = MAC;
         this.portSW = portSW;
@@ -45,11 +46,11 @@ public class Host {
         this.portSW = portSW;
     }
 
-    public IPv4Address getIP() {
+    public String getIP() {
         return IP;
     }
 
-    public void setIP(IPv4Address IP) {
+    public void setIP(String IP) {
         this.IP = IP;
     }
 }

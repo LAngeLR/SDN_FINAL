@@ -2,12 +2,14 @@ package net.floodlightcontroller.firewall;
 
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonSerializer;
+import com.fasterxml.jackson.databind.SerializerProvider;
 import net.floodlightcontroller.core.types.Host;
 import org.python.antlr.ast.Str;
 
 import java.io.IOException;
 
-public class FirewallConectadosSerializer extends JsonSerializer<Host>{
+public class FirewallConectadosSerializer extends JsonSerializer<Host> {
 
     @Override
     public void serialize(Host hostsito, JsonGenerator jGen, SerializerProvider arg2) throws IOException, JsonProcessingException {
