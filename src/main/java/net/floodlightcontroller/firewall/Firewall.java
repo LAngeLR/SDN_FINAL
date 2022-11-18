@@ -326,20 +326,12 @@ IFloodlightModule {
 			if (cntx != null) {
 				decision = IRoutingDecision.rtStore.get(cntx, IRoutingDecision.CONTEXT_DECISION);
 
-				//------------------------------------------------------------------------------------------------------------------------
-				logger.info("Entro justo antes de enviar al process packet in del firewall");
-				//------------------------------------------------------------------------------------------------------------------------
-
 				return this.processPacketInMessage(sw, (OFPacketIn) msg, decision, cntx);
 			}
 			break;
 		default:
 			break;
 		}
-
-		//------------------------------------------------------------------------------------------------------------------------
-		logger.info("Me salgo del if y hablo con forwarding");
-		//------------------------------------------------------------------------------------------------------------------------
 
 		return Command.CONTINUE;
 	}
@@ -569,10 +561,14 @@ IFloodlightModule {
 		// Allowing L2 broadcast + ARP broadcast request (also deny malformed
 		// broadcasts -> L2 broadcast + L3 unicast)
 		//------------------------------------------------------------------------------------------------------------------------
-		logger.info("llego mi paquete - estoy justo antes de saber si es de broadcast");
-		logger.info(eth.getSourceMACAddress().toString());
+		logger.info("SERA DE BROADCAST MI PAQUETE?");
+		logger.info(">>SOURCE MAC: "+eth.getSourceMACAddress().toString());
 		//------------------------------------------------------------------------------------------------------------------------
 		if (eth.isBroadcast() == true) {
+			//------------------------------------------------------------------------------------------------------------------------
+			logger.info(">>ES DE BROADCAST");
+			logger.info(eth.getEtherType().toString());
+			//------------------------------------------------------------------------------------------------------------------------
 			boolean allowBroadcast = true;
 			// the case to determine if we have L2 broadcast + L3 unicast (L3 broadcast default set to /24 or 255.255.255.0)
 			// don't allow this broadcast packet if such is the case (malformed packet)
@@ -588,6 +584,11 @@ IFloodlightModule {
 						IDeviceService.fcStore.get(cntx, IDeviceService.CONTEXT_SRC_DEVICE),
 						IRoutingDecision.RoutingAction.MULTICAST);
 				decision.addToContext(cntx);
+
+				//------------------------------------------------------------------------------------------------------------------------
+				logger.info(">>>>HAGO MULTICAST");
+				//------------------------------------------------------------------------------------------------------------------------
+
 			} else {
 				if (logger.isTraceEnabled()) {
 					logger.trace("Blocking malformed broadcast traffic for PacketIn={}", pi);
@@ -597,18 +598,18 @@ IFloodlightModule {
 						IDeviceService.fcStore.get(cntx, IDeviceService.CONTEXT_SRC_DEVICE),
 						IRoutingDecision.RoutingAction.DROP);
 				decision.addToContext(cntx);
-			}
-			//------------------------------------------------------------------------------------------------------------------------
-			logger.info("mi trafico es de broadcast");
-			logger.info(eth.getEtherType().toString());
-			//------------------------------------------------------------------------------------------------------------------------
 
+				//------------------------------------------------------------------------------------------------------------------------
+				logger.info(">>>>HAGO DROP");
+				//------------------------------------------------------------------------------------------------------------------------
+
+			}
 
 			return Command.CONTINUE;
 		}
 
 		//------------------------------------------------------------------------------------------------------------------------
-		logger.info("mi trafico no es de broadcast");
+		logger.info(">>NO ES DE BROADCAST");
 		logger.info(eth.getEtherType().toString());
 		//------------------------------------------------------------------------------------------------------------------------
 		boolean estaEnSesion = false;
@@ -727,11 +728,10 @@ IFloodlightModule {
 			}
 		}else{
 			//------------------------------------------------------------------------------------------------------------------------
-			logger.info("mi trafico es ARP");
-			logger.info(eth.getEtherType().toString());
+			logger.info(">>TRAFICO : ARP");
 			//------------------------------------------------------------------------------------------------------------------------
 		}
-		logger.info("-----------------Packet IN acabado-----------------------");
+		logger.info("-----------------MI CODIGO HASTA ACA-----------------------");
 
 		//------------------------------------------------------------------------------------------------------------------------
 
@@ -760,11 +760,14 @@ IFloodlightModule {
 						IRoutingDecision.RoutingAction.DROP);
 				decision.setMatch(rmp.match);
 				decision.addToContext(cntx);
+				logger.info("-----------------TENGO REGLA NULA Y SETEAN ACTION DROP-----------------------");
 				if (logger.isTraceEnabled()) {
 					if (rule == null) {
 						logger.trace("No firewall rule found for PacketIn={}, blocking flow", pi);
+						logger.info("-----------------ENTRO IF 1-----------------------");
 					} else if (rule.action == FirewallRule.FirewallAction.DROP) {
 						logger.trace("Deny rule={} match for PacketIn={}", rule, pi);
+						logger.info("-----------------ENTRO IF 2-----------------------");
 					}
 				}
 				// Found a rule and the rule is not a drop, so allow the packet
@@ -774,12 +777,13 @@ IFloodlightModule {
 						IRoutingDecision.RoutingAction.FORWARD_OR_FLOOD);
 				decision.setMatch(rmp.match);
 				decision.addToContext(cntx);
+				logger.info("-----------------ENCUENTRAN REGLA Y SETEAN FORWARD O FLOOD-----------------------");
 				if (logger.isTraceEnabled()) {
 					logger.trace("Allow rule={} match for PacketIn={}", rule, pi);
 				}
 			}
 		}
-
+		logger.info("--------------------------FIN DEL PACKET IN-----------------------");
 		return Command.CONTINUE;
 	}
 
