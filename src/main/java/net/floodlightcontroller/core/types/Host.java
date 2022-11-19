@@ -22,6 +22,9 @@ public class Host {
         this.IP = IP;
     }
 
+    public Host() {
+    }
+
     public String getSW() {
         return DPID_SW;
     }

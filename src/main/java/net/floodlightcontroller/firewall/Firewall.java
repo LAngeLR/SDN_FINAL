@@ -17,12 +17,7 @@
 
 package net.floodlightcontroller.firewall;
 
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import net.floodlightcontroller.core.types.Host;
 import org.projectfloodlight.openflow.protocol.OFFactories;
@@ -50,8 +45,6 @@ import net.floodlightcontroller.core.module.IFloodlightModule;
 import net.floodlightcontroller.core.module.IFloodlightService;
 import net.floodlightcontroller.core.IFloodlightProviderService;
 import net.floodlightcontroller.devicemanager.IDeviceService;
-
-import java.util.ArrayList;
 
 import net.floodlightcontroller.packet.Ethernet;
 import net.floodlightcontroller.packet.IPv4;
@@ -597,8 +590,9 @@ IFloodlightModule {
 
 			logger.info("--------------------------------------------------------");
 			return Command.CONTINUE;
-		}
-		*/
+		}*/
+
+
 		logger.info("5.TU TRAFICO NO ES DE BROADCAST.TIENE COMO ETHERTYPE:"+eth.getEtherType().toString());
 		boolean estaEnSesion = false;
 		if(!eth.getEtherType().equals(EthType.ARP) && eth.getEtherType().equals(EthType.IPv4)){
@@ -679,22 +673,22 @@ IFloodlightModule {
 
 				logger.info("EL TAMAÑO DEL ARREGLO DE HOSTS CONECTADOS ES : "+conectados.size());
 				if(ip.getProtocol().equals(IpProtocol.TCP)){
-					TCP tcp = (TCP) ip.getPayload();
+					/*TCP tcp = (TCP) ip.getPayload();
 					logger.info("9.5. EL FLAG DEL TRAFICO TCP ES: "+tcp.getFlags());
 					if(sourceMAC.equals(MACWebServer) && sourceIP.equals(IPv4WebServer)){
 						logger.info("10.COMO EL SOURCE ES EL SERVIDOR WEB CON IP:"+sourceIP+" .ENTONCES SE HACE FORWARDING");
 						RuleMatchPair rmp = this.matchWithRule(sw, pi, cntx);
 						FirewallRule rule = rmp.rule;
 						decision = new RoutingDecision(sw.getId(), inPort,
-								IDeviceService.fcStore.get(cntx, IDeviceService.CONTEXT_SRC_DEVICE),
-								IRoutingDecision.RoutingAction.FORWARD);
+									IDeviceService.fcStore.get(cntx, IDeviceService.CONTEXT_SRC_DEVICE),
+									IRoutingDecision.RoutingAction.FORWARD);
 						decision.setMatch(rmp.match);
 						decision.addToContext(cntx);
 						logger.info("--------------------------------------------------------");
 						return Command.CONTINUE;
 
 					}else{
-						if((tcp.getFlags() == (short) 0x12) || (tcp.getFlags() == (short) 0x18) || (tcp.getFlags() == (short) 0x10)){
+						if((tcp.getFlags() == (short) 0x12) || (tcp.getFlags() == (short) 0x18) || (tcp.getFlags() == (short) 0x10) || (tcp.getFlags() == (short) 0x11)){
 							RuleMatchPair rmp = this.matchWithRule(sw, pi, cntx);
 							FirewallRule rule = rmp.rule;
 							decision = new RoutingDecision(sw.getId(), inPort,
@@ -704,8 +698,8 @@ IFloodlightModule {
 							decision.addToContext(cntx);
 							logger.info("--------------------------------------------------------");
 							return Command.CONTINUE;
-						}else{
-							//Detecto el destination Port
+						}else{*/
+							/*//Detecto el destination Port
 							int destPort = tcp.getDestinationPort().getPort(); //8080
 
 							//Detecto la MAC destino
@@ -719,41 +713,39 @@ IFloodlightModule {
 								RuleMatchPair rmp = this.matchWithRule(sw, pi, cntx);
 								FirewallRule rule = rmp.rule;
 								decision = new RoutingDecision(sw.getId(), inPort,
-										IDeviceService.fcStore.get(cntx, IDeviceService.CONTEXT_SRC_DEVICE),
-										IRoutingDecision.RoutingAction.FORWARD);
+											IDeviceService.fcStore.get(cntx, IDeviceService.CONTEXT_SRC_DEVICE),
+											IRoutingDecision.RoutingAction.FORWARD);
 								decision.setMatch(rmp.match);
 								decision.addToContext(cntx);
 								logger.info("--------------------------------------------------------");
 								return Command.CONTINUE;
 
-							}else{
-								logger.info("12.COMO NO ES UN TRAFICO ACEPTADO DEL HOST CON IP:"+sourceIP+" AL SERVIDOR ENTONCES TU ACTION ES NONE");
-								RuleMatchPair rmp = this.matchWithRule(sw, pi, cntx);
-								FirewallRule rule = rmp.rule;
-								decision = new RoutingDecision(sw.getId(), inPort,
-										IDeviceService.fcStore.get(cntx, IDeviceService.CONTEXT_SRC_DEVICE),
-										IRoutingDecision.RoutingAction.NONE);
-								decision.setMatch(rmp.match);
-								decision.addToContext(cntx);
-								logger.info("--------------------------------------------------------");
-								return Command.CONTINUE;
-							}
+							}else{*/
+					logger.info("12.COMO NO ES UN TRAFICO ACEPTADO DEL HOST CON IP:"+sourceIP+" AL SERVIDOR ENTONCES TU ACTION ES NONE");
+					RuleMatchPair rmp = this.matchWithRule(sw, pi, cntx);
+					FirewallRule rule = rmp.rule;
+					decision = new RoutingDecision(sw.getId(), inPort,
+							IDeviceService.fcStore.get(cntx, IDeviceService.CONTEXT_SRC_DEVICE),
+							IRoutingDecision.RoutingAction.NONE);
+					decision.setMatch(rmp.match);
+					decision.addToContext(cntx);
+					logger.info("--------------------------------------------------------");
+					return Command.CONTINUE;
+					/* }	*/
 
 
-						}
-					}
+						/*}
+					}*/
 
 				}else{
 					logger.info("13.TU TRAFICO NO ES TCP POR LO QUE TU ACTION ES NONE OSEA TIPO DROP.EL HOST CON IP: "+sourceIP);
 					RuleMatchPair rmp = this.matchWithRule(sw, pi, cntx);
 					FirewallRule rule = rmp.rule;
-					if (rule == null){
-						decision = new RoutingDecision(sw.getId(), inPort,
-								IDeviceService.fcStore.get(cntx, IDeviceService.CONTEXT_SRC_DEVICE),
-								IRoutingDecision.RoutingAction.NONE);
-						decision.setMatch(rmp.match);
-						decision.addToContext(cntx);
-					}
+					decision = new RoutingDecision(sw.getId(), inPort,
+							IDeviceService.fcStore.get(cntx, IDeviceService.CONTEXT_SRC_DEVICE),
+							IRoutingDecision.RoutingAction.NONE);
+					decision.setMatch(rmp.match);
+					decision.addToContext(cntx);
 					logger.info("--------------------------------------------------------");
 					return Command.CONTINUE;
 				}
@@ -781,7 +773,7 @@ IFloodlightModule {
 		 */
 		decision = new RoutingDecision(sw.getId(), inPort,
 				IDeviceService.fcStore.get(cntx, IDeviceService.CONTEXT_SRC_DEVICE),
-				IRoutingDecision.RoutingAction.FORWARD_OR_FLOOD);
+				IRoutingDecision.RoutingAction.MULTICAST);
 		decision.addToContext(cntx);
 
 		// check if we have a matching rule for this packet/flow and no decision has been made yet
@@ -833,4 +825,57 @@ IFloodlightModule {
 		return enabled;
 	}
 
+	@Override
+	public void agregarHostAutenticado(String username, String IP) {
+		Host hostQueSeInsertara = new Host();
+
+		int index = 0;
+		for(Host host2 : conectados){
+			if(host2.getIP().equals(IP)){	//Obtengo el host
+				hostQueSeInsertara.setIP(host2.getIP());
+				hostQueSeInsertara.setMAC(host2.getMAC());
+				hostQueSeInsertara.setPortSW(host2.getPortSW());
+				hostQueSeInsertara.setSW(host2.getSW());
+				break;
+			}
+			index++;
+		}
+
+		conectados.remove(index);
+
+
+		if(sesiones.size() == 0){
+			ArrayList<Host> conexion = new ArrayList<>();
+			conexion.add(hostQueSeInsertara);
+			sesiones.put(username,conexion);
+
+		}else{
+
+			Set<String> usernamesSesiones = sesiones.keySet();
+			boolean encontreSesion = false;
+
+			for(String usernames : usernamesSesiones){
+				if(usernames.equals(username)){
+					encontreSesion = true;
+					break;
+				}
+			}
+
+			ArrayList<Host> conx;
+			if(encontreSesion){
+				conx = sesiones.get(username);
+				conx.add(hostQueSeInsertara);
+
+			}else{
+				conx = new ArrayList<>();
+				conx.add(hostQueSeInsertara);
+			}
+
+			sesiones.put(username,conx);
+
+		}
+
+		logger.info("EL HOST CON USERNAME: "+username+" HA COMENZADO A TENER UNA SESION");
+
+	}
 }

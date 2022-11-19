@@ -18,6 +18,7 @@
 package net.floodlightcontroller.firewall;
 
 import net.floodlightcontroller.restserver.RestletRoutable;
+import net.floodlightcontroller.staticflowentry.web.ListStaticFlowEntriesResource;
 import org.restlet.Context;
 import org.restlet.routing.Router;
 
@@ -35,7 +36,7 @@ public class FirewallWebRoutable implements RestletRoutable {
         router.attach("/module/storageRules/json", FirewallStorageRulesResource.class);
         router.attach("/R1/conectados/json",       FirewallConectadosResource.class);
         router.attach("/rules/json",               FirewallRulesResource.class);
-
+        router.attach("/R1/autenticados/{username}/{IP}/json",      FirewallRequestWebServerResource.class);
         return router;
     }
 
