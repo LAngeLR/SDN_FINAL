@@ -556,7 +556,7 @@ IFloodlightModule {
 		Ethernet eth = IFloodlightProviderService.bcStore.get(cntx, IFloodlightProviderService.CONTEXT_PI_PAYLOAD);
 		OFPort inPort = (pi.getVersion().compareTo(OFVersion.OF_12) < 0 ? pi.getInPort() : pi.getMatch().get(MatchField.IN_PORT));
 
-		logger.info("--------------------------INICIO DEL PACKET IN-----------------------");
+		/*logger.info("--------------------------INICIO DEL PACKET IN-----------------------");
 		logger.info("EL TAMAÑO DEL ARREGLO DE HOSTS CONECTADOS ES : "+conectados.size());
 		// Allowing L2 broadcast + ARP broadcast request (also deny malformed broadcasts -> L2 broadcast + L3 unicast)
 		logger.info("1.SERA DE BROADCAST MI PAQUETE?");
@@ -581,7 +581,7 @@ IFloodlightModule {
 
 				logger.info("3.SE SETEA COMO ACTION:MULTICAST");
 
-			} else {
+			}  else {
 				if (logger.isTraceEnabled()) {
 					logger.trace("Blocking malformed broadcast traffic for PacketIn={}", pi);
 				}
@@ -598,10 +598,9 @@ IFloodlightModule {
 			logger.info("--------------------------------------------------------");
 			return Command.CONTINUE;
 		}
-
+		*/
 		logger.info("5.TU TRAFICO NO ES DE BROADCAST.TIENE COMO ETHERTYPE:"+eth.getEtherType().toString());
 		boolean estaEnSesion = false;
-
 		if(!eth.getEtherType().equals(EthType.ARP) && eth.getEtherType().equals(EthType.IPv4)){
 			logger.info("6.TU TRAFICO NO ES DE ARP");
 
@@ -613,7 +612,7 @@ IFloodlightModule {
 			//Detecto el SW
 			String DPID_SW = sw.getId().toString();
 
-			//Detecto el OFPort -->PREGUNTAR
+			//Detecto el OFPort
 			int portSW = inPort.getPortNumber();
 
 			//Detecto la IP
@@ -665,7 +664,7 @@ IFloodlightModule {
 				if(!sourceMAC.equals(MACWebServer) && !sourceIP.equals(IPv4WebServer)){
 					boolean igual = false;
 					for(Host host1 : conectados){
-						if(host1.getIP().equals(sourceIP) && host1.getMAC().equals(sourceMAC) && (host1.getPortSW() == portSW) && host1.getSW().equals(DPID_SW)){
+						if(host1.getIP().equals(sourceIP) && host1.getMAC().equals(sourceMAC)){
 							igual = true;
 							break;
 						}
@@ -686,53 +685,61 @@ IFloodlightModule {
 						logger.info("10.COMO EL SOURCE ES EL SERVIDOR WEB CON IP:"+sourceIP+" .ENTONCES SE HACE FORWARDING");
 						RuleMatchPair rmp = this.matchWithRule(sw, pi, cntx);
 						FirewallRule rule = rmp.rule;
-						if (rule == null){
+						decision = new RoutingDecision(sw.getId(), inPort,
+								IDeviceService.fcStore.get(cntx, IDeviceService.CONTEXT_SRC_DEVICE),
+								IRoutingDecision.RoutingAction.FORWARD);
+						decision.setMatch(rmp.match);
+						decision.addToContext(cntx);
+						logger.info("--------------------------------------------------------");
+						return Command.CONTINUE;
+
+					}else{
+						if((tcp.getFlags() == (short) 0x12) || (tcp.getFlags() == (short) 0x18) || (tcp.getFlags() == (short) 0x10)){
+							RuleMatchPair rmp = this.matchWithRule(sw, pi, cntx);
+							FirewallRule rule = rmp.rule;
 							decision = new RoutingDecision(sw.getId(), inPort,
 									IDeviceService.fcStore.get(cntx, IDeviceService.CONTEXT_SRC_DEVICE),
 									IRoutingDecision.RoutingAction.FORWARD);
 							decision.setMatch(rmp.match);
 							decision.addToContext(cntx);
-						}
-						logger.info("--------------------------------------------------------");
-						return Command.CONTINUE;
+							logger.info("--------------------------------------------------------");
+							return Command.CONTINUE;
+						}else{
+							//Detecto el destination Port
+							int destPort = tcp.getDestinationPort().getPort(); //8080
 
-					}else{
-						//Detecto el destination Port
-						int destPort = tcp.getDestinationPort().getPort(); //8080
+							//Detecto la MAC destino
+							String destMAC = eth.getDestinationMACAddress().toString();
 
-						//Detecto la MAC destino
-						String destMAC = eth.getDestinationMACAddress().toString();
+							//Detecto la IP destino
+							String destIP = ip.getDestinationAddress().toString();
 
-						//Detecto la IP destino
-						String destIP = ip.getDestinationAddress().toString();
-
-						if(destPort==PortWebServer && destMAC.equals(MACWebServer) && destIP.equals(IPv4WebServer)){
-							logger.info("11.COMO CUMPLE CON TODO LOS REQUISITOS . SE HACE FORWARDING HACIA EL SERVIDOR DE AUTENTICACION");
-							RuleMatchPair rmp = this.matchWithRule(sw, pi, cntx);
-							FirewallRule rule = rmp.rule;
-							if (rule == null){
+							if(destPort==PortWebServer && destMAC.equals(MACWebServer) && destIP.equals(IPv4WebServer)){
+								logger.info("11.COMO CUMPLE CON TODO LOS REQUISITOS . SE HACE FORWARDING HACIA EL SERVIDOR DE AUTENTICACION");
+								RuleMatchPair rmp = this.matchWithRule(sw, pi, cntx);
+								FirewallRule rule = rmp.rule;
 								decision = new RoutingDecision(sw.getId(), inPort,
 										IDeviceService.fcStore.get(cntx, IDeviceService.CONTEXT_SRC_DEVICE),
 										IRoutingDecision.RoutingAction.FORWARD);
 								decision.setMatch(rmp.match);
 								decision.addToContext(cntx);
-							}
-							logger.info("--------------------------------------------------------");
-							return Command.CONTINUE;
+								logger.info("--------------------------------------------------------");
+								return Command.CONTINUE;
 
-						}else{
-							logger.info("12.COMO NO ES UN TRAFICO ACEPTADO DEL HOST CON IP:"+sourceIP+" AL SERVIDOR ENTONCES TU ACTION ES NONE");
-							RuleMatchPair rmp = this.matchWithRule(sw, pi, cntx);
-							FirewallRule rule = rmp.rule;
-							if (rule == null){
+							}else{
+								logger.info("12.COMO NO ES UN TRAFICO ACEPTADO DEL HOST CON IP:"+sourceIP+" AL SERVIDOR ENTONCES TU ACTION ES NONE");
+								RuleMatchPair rmp = this.matchWithRule(sw, pi, cntx);
+								FirewallRule rule = rmp.rule;
 								decision = new RoutingDecision(sw.getId(), inPort,
 										IDeviceService.fcStore.get(cntx, IDeviceService.CONTEXT_SRC_DEVICE),
 										IRoutingDecision.RoutingAction.NONE);
 								decision.setMatch(rmp.match);
 								decision.addToContext(cntx);
+								logger.info("--------------------------------------------------------");
+								return Command.CONTINUE;
 							}
-							logger.info("--------------------------------------------------------");
-							return Command.CONTINUE;
+
+
 						}
 					}
 
@@ -753,13 +760,14 @@ IFloodlightModule {
 			}
 
 		}else{
+
 			if(eth.getEtherType().equals(EthType.ARP)){
 				logger.info("14.TU TRAFICO ES ARP Y TIENE COMO ETHERTYPE: "+eth.getEtherType());
 			}else{
 				logger.info("15.TU TRAFICO TIENE COMO ETHERTYPE: "+eth.getEtherType());
 			}
-		}
 
+		}
 
 		/*
 		 * ARP response (unicast) can be let through without filtering through
