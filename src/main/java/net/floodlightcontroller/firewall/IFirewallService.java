@@ -76,4 +76,6 @@ public interface IFirewallService extends IFloodlightService {
     public ArrayList<Host> getBuffer();
 
     public void agregarHostAutenticado(String username,String IP);
+
+    public void cerrarSesionHost(String username,String IP);
 }

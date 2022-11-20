@@ -634,24 +634,27 @@ IFloodlightModule {
 			}
 
 
+
 			if(!ip.equals(IPv4WebServer) && !sourceMAC.equals(MACWebServer)){
-				if(!conectados.contains(host)){
-					if(!sesiones.isEmpty()){
-						for(ArrayList<Host> sesiones : sesiones.values()){
-							if(sesiones.contains(host)){
+				if(!sesiones.isEmpty()){
+					for(ArrayList<Host> sess : sesiones.values()){
+						for(Host h3 : sess){
+							if(h3.getIP().equals(sourceIP) && h3.getSW().equals(DPID_SW) && h3.getMAC().equals(sourceMAC) && (h3.getPortSW() == portSW)){
 								estaEnSesion = true;
 								break;
 							}
 						}
 					}
 
+
 				}
+
 			}
 
 
 			if(estaEnSesion){
 				//Esta en sesion el usuario
-				logger.info("8.EL HOST CON IP: "+sourceIP+" ESTA EN SESION");
+				logger.info("8.EL HOST CON IP: "+sourceIP+" ESTA EN SESION .AHORA TENDRIAS QUE SETEARLES LAS REGLAS");
 
 			}else{
 				//significa usuario nuevo o cerro sesion anteriomente por lo que no tiene una sesion activa -> no esta autenticado
@@ -759,6 +762,12 @@ IFloodlightModule {
 				logger.info("15.TU TRAFICO TIENE COMO ETHERTYPE: "+eth.getEtherType());
 			}
 
+			decision = new RoutingDecision(sw.getId(), inPort,
+					IDeviceService.fcStore.get(cntx, IDeviceService.CONTEXT_SRC_DEVICE),
+					IRoutingDecision.RoutingAction.MULTICAST);
+			decision.addToContext(cntx);
+
+			return Command.CONTINUE;
 		}
 
 		/*
@@ -771,9 +780,10 @@ IFloodlightModule {
 		 * FirewallDecision(IRoutingDecision.RoutingAction.FORWARD_OR_FLOOD);
 		 * decision.addToContext(cntx); return Command.CONTINUE; }
 		 */
+
 		decision = new RoutingDecision(sw.getId(), inPort,
 				IDeviceService.fcStore.get(cntx, IDeviceService.CONTEXT_SRC_DEVICE),
-				IRoutingDecision.RoutingAction.MULTICAST);
+				IRoutingDecision.RoutingAction.NONE);
 		decision.addToContext(cntx);
 
 		// check if we have a matching rule for this packet/flow and no decision has been made yet
@@ -876,6 +886,28 @@ IFloodlightModule {
 		}
 
 		logger.info("EL HOST CON USERNAME: "+username+" HA COMENZADO A TENER UNA SESION");
+
+	}
+
+	@Override
+	public void cerrarSesionHost(String username, String IP) {
+
+		ArrayList<Host> cuentas = sesiones.get(username);
+
+		int indecito = 0;
+
+		for(Host cc : cuentas){
+			if(cc.getIP().equals(IP)){
+				break;
+			}
+			indecito++;
+		}
+
+		cuentas.remove(indecito);
+
+		sesiones.put(username,cuentas);
+
+		logger.info("EL HOST CON USERNAME: "+username+" HA CERRADO SESION");
 
 	}
 }

@@ -37,6 +37,7 @@ public class FirewallWebRoutable implements RestletRoutable {
         router.attach("/R1/conectados/json",       FirewallConectadosResource.class);
         router.attach("/rules/json",               FirewallRulesResource.class);
         router.attach("/R1/autenticados/{username}/{IP}/json",      FirewallRequestWebServerResource.class);
+        router.attach("/R1/logoff/{username}/{IP}/json",FirewallRequestLogOffWebServerResource.class);
         return router;
     }
 
