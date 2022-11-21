@@ -29,12 +29,25 @@ public class FirewallRequestSesionesHostsResource extends ServerResource {
             mensajeFinal = mensajeFinal + " "+ username + "[";
 
             if(listita.size() != 0){
+                for(Host h : listita){
+                    String IP = h.getIP();
+                    String MAC = h.getMAC();
+                    int port = h.getPortSW();
+                    String DPID = h.getSW();
 
-                
+                    mensajeFinal = mensajeFinal + "{";
+                    mensajeFinal =  mensajeFinal + "MAC: "+MAC+ ",\n";
+                    mensajeFinal = mensajeFinal + " IP: " + IP+ ",\n";
+                    mensajeFinal = mensajeFinal + " Port: "+ port+ ",\n";
+                    mensajeFinal = mensajeFinal + " DPID: "+ DPID+ "\n";
+
+                    mensajeFinal = mensajeFinal + "}\n";
+                    mensajeFinal = mensajeFinal + "\n";
+                }
 
             }
 
-            mensajeFinal = mensajeFinal + " ]\n";
+            mensajeFinal = mensajeFinal + " ]\n   ";
 
         }
 
