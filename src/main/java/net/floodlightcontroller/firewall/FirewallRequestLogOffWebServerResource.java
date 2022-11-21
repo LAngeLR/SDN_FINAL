@@ -20,7 +20,7 @@ public class FirewallRequestLogOffWebServerResource  extends ServerResource {
 
         try {
             firewallService.cerrarSesionHost(username,IP_user);
-            return "{\"Status\" : \"Sesión cerrada del host con exito!\"}";
+            return "{\"Status\" : \"Sesion cerrada del host con exito!\"}";
         } catch (Exception e){
             return "{\"Status\" : \"An exception has ocurred!\"}";
         }

@@ -18,6 +18,7 @@
 package net.floodlightcontroller.firewall;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -78,4 +79,6 @@ public interface IFirewallService extends IFloodlightService {
     public void agregarHostAutenticado(String username,String IP);
 
     public void cerrarSesionHost(String username,String IP);
+
+    public HashMap<String,ArrayList<Host>> getSesiones();
 }

@@ -886,7 +886,6 @@ IFloodlightModule {
 		}
 
 		logger.info("EL HOST CON USERNAME: "+username+" HA COMENZADO A TENER UNA SESION");
-
 	}
 
 	@Override
@@ -909,5 +908,10 @@ IFloodlightModule {
 
 		logger.info("EL HOST CON USERNAME: "+username+" HA CERRADO SESION");
 
+	}
+
+	@Override
+	public HashMap<String, ArrayList<Host>> getSesiones() {
+		return sesiones;
 	}
 }
