@@ -655,6 +655,10 @@ IFloodlightModule {
 			if(estaEnSesion){
 				//Esta en sesion el usuario
 				logger.info("8.EL HOST CON IP: "+sourceIP+" ESTA EN SESION .AHORA TENDRIAS QUE SETEARLES LAS REGLAS");
+				decision = new RoutingDecision(sw.getId(), inPort,
+						IDeviceService.fcStore.get(cntx, IDeviceService.CONTEXT_SRC_DEVICE),
+						IRoutingDecision.RoutingAction.NONE);
+				decision.addToContext(cntx);
 
 			}else{
 				//significa usuario nuevo o cerro sesion anteriomente por lo que no tiene una sesion activa -> no esta autenticado
@@ -783,7 +787,7 @@ IFloodlightModule {
 
 		decision = new RoutingDecision(sw.getId(), inPort,
 				IDeviceService.fcStore.get(cntx, IDeviceService.CONTEXT_SRC_DEVICE),
-				IRoutingDecision.RoutingAction.NONE);
+				IRoutingDecision.RoutingAction.MULTICAST);
 		decision.addToContext(cntx);
 
 		// check if we have a matching rule for this packet/flow and no decision has been made yet
