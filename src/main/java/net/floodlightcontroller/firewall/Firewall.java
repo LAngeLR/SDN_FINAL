@@ -63,13 +63,13 @@ import org.slf4j.LoggerFactory;
 /**
  * Stateless firewall implemented as a Google Summer of Code project.
  * Configuration done through REST API
- * 
+ *
  * @author Amer Tahir
  * @edited KC Wang
  * @edited Ryan Izard
  */
 public class Firewall implements IFirewallService, IOFMessageListener,
-IFloodlightModule {
+		IFloodlightModule {
 
 	// service modules needed
 	protected IFloodlightProviderService floodlightProvider;
@@ -81,10 +81,16 @@ IFloodlightModule {
 	protected ArrayList<Host> conectados;
 	protected String MACWebServer = "fa:16:3e:70:45:ec";
 	protected String IPv4WebServer = "10.0.0.101";
+	protected String IPv4WebServer2 = "192.168.200.19";
 	protected int PortWebServer = 8080;
 	protected String MACController = "fa:16:3e:c7:55:5b";
 	protected String IPv4Controller = "192.168.200.10";
 	protected int PortController = 8080;
+
+
+	protected String MACPermissions = "fa:16:3e:e8:ef:11";
+	protected String MACInformation = "fa:16:3e:05:41:b6";
+
 	//-----------------------------------------------------------------------------------------------------------------
 
 	protected List<FirewallRule> rules; // protected by synchronized
@@ -119,14 +125,14 @@ IFloodlightModule {
 	public static final String COLUMN_PRIORITY = "priority";
 	public static final String COLUMN_ACTION = "action";
 	public static String ColumnNames[] = { COLUMN_RULEID, COLUMN_DPID,
-		COLUMN_IN_PORT, COLUMN_DL_SRC, COLUMN_DL_DST, COLUMN_DL_TYPE,
-		COLUMN_NW_SRC_PREFIX, COLUMN_NW_SRC_MASKBITS, COLUMN_NW_DST_PREFIX,
-		COLUMN_NW_DST_MASKBITS, COLUMN_NW_PROTO, COLUMN_TP_SRC,
-		COLUMN_TP_DST, COLUMN_WILDCARD_DPID, COLUMN_WILDCARD_IN_PORT,
-		COLUMN_WILDCARD_DL_SRC, COLUMN_WILDCARD_DL_DST,
-		COLUMN_WILDCARD_DL_TYPE, COLUMN_WILDCARD_NW_SRC,
-		COLUMN_WILDCARD_NW_DST, COLUMN_WILDCARD_NW_PROTO, COLUMN_PRIORITY,
-		COLUMN_ACTION };
+			COLUMN_IN_PORT, COLUMN_DL_SRC, COLUMN_DL_DST, COLUMN_DL_TYPE,
+			COLUMN_NW_SRC_PREFIX, COLUMN_NW_SRC_MASKBITS, COLUMN_NW_DST_PREFIX,
+			COLUMN_NW_DST_MASKBITS, COLUMN_NW_PROTO, COLUMN_TP_SRC,
+			COLUMN_TP_DST, COLUMN_WILDCARD_DPID, COLUMN_WILDCARD_IN_PORT,
+			COLUMN_WILDCARD_DL_SRC, COLUMN_WILDCARD_DL_DST,
+			COLUMN_WILDCARD_DL_TYPE, COLUMN_WILDCARD_NW_SRC,
+			COLUMN_WILDCARD_NW_DST, COLUMN_WILDCARD_NW_PROTO, COLUMN_PRIORITY,
+			COLUMN_ACTION };
 
 	@Override
 	public String getName() {
@@ -171,10 +177,10 @@ IFloodlightModule {
 	/**
 	 * Reads the rules from the storage and creates a sorted arraylist of
 	 * FirewallRule from them.
-	 * 
+	 *
 	 * Similar to getStorageRules(), which only reads contents for REST GET and
 	 * does no parsing, checking, nor putting into FirewallRule objects
-	 * 
+	 *
 	 * @return the sorted arraylist of FirewallRule instances (rules from
 	 *         storage)
 	 */
@@ -312,16 +318,16 @@ IFloodlightModule {
 	@Override
 	public Command receive(IOFSwitch sw, OFMessage msg, FloodlightContext cntx) {
 		switch (msg.getType()) {
-		case PACKET_IN:
-			IRoutingDecision decision = null;
-			if (cntx != null) {
-				decision = IRoutingDecision.rtStore.get(cntx, IRoutingDecision.CONTEXT_DECISION);
+			case PACKET_IN:
+				IRoutingDecision decision = null;
+				if (cntx != null) {
+					decision = IRoutingDecision.rtStore.get(cntx, IRoutingDecision.CONTEXT_DECISION);
 
-				return this.processPacketInMessage(sw, (OFPacketIn) msg, decision, cntx);
-			}
-			break;
-		default:
-			break;
+					return this.processPacketInMessage(sw, (OFPacketIn) msg, decision, cntx);
+				}
+				break;
+			default:
+				break;
 		}
 
 		return Command.CONTINUE;
@@ -456,7 +462,7 @@ IFloodlightModule {
 	 * appropriately set for different types of rules (allow vs. deny), separate
 	 * wildcards are maintained. Iteration is performed on the sorted list of
 	 * rules (sorted in decreasing order of priority).
-	 * 
+	 *
 	 * @param sw
 	 *            the switch instance
 	 * @param pi
@@ -493,30 +499,30 @@ IFloodlightModule {
 		rmp.rule = matched_rule;
 		if (matched_rule == null) {
 			/*
-			 * No rule was found, so drop the packet with as specific 
+			 * No rule was found, so drop the packet with as specific
 			 * of a drop rule as possible as not to interfere with other
 			 * firewall rules.
 			 */
 			Match.Builder mb = OFFactories.getFactory(pi.getVersion()).buildMatch();
 			mb.setExact(MatchField.IN_PORT, (pi.getVersion().compareTo(OFVersion.OF_12) < 0 ? pi.getInPort() : pi.getMatch().get(MatchField.IN_PORT)))
-			.setExact(MatchField.ETH_SRC, eth.getSourceMACAddress())
-			.setExact(MatchField.ETH_DST, eth.getDestinationMACAddress())
-			.setExact(MatchField.ETH_TYPE, eth.getEtherType());
+					.setExact(MatchField.ETH_SRC, eth.getSourceMACAddress())
+					.setExact(MatchField.ETH_DST, eth.getDestinationMACAddress())
+					.setExact(MatchField.ETH_TYPE, eth.getEtherType());
 
 			if (mb.get(MatchField.ETH_TYPE).equals(EthType.IPv4)) {
 				IPv4 ipv4 = (IPv4) eth.getPayload();
 				mb.setExact(MatchField.IPV4_SRC, ipv4.getSourceAddress())
-				.setExact(MatchField.IPV4_DST, ipv4.getDestinationAddress())
-				.setExact(MatchField.IP_PROTO, ipv4.getProtocol());
+						.setExact(MatchField.IPV4_DST, ipv4.getDestinationAddress())
+						.setExact(MatchField.IP_PROTO, ipv4.getProtocol());
 
 				if (mb.get(MatchField.IP_PROTO).equals(IpProtocol.TCP)) {
 					TCP tcp = (TCP) ipv4.getPayload();
 					mb.setExact(MatchField.TCP_SRC, tcp.getSourcePort())
-					.setExact(MatchField.TCP_DST, tcp.getDestinationPort());
+							.setExact(MatchField.TCP_DST, tcp.getDestinationPort());
 				} else if (mb.get(MatchField.IP_PROTO).equals(IpProtocol.UDP)) {
 					UDP udp = (UDP) ipv4.getPayload();
 					mb.setExact(MatchField.UDP_SRC, udp.getSourcePort())
-					.setExact(MatchField.UDP_DST, udp.getDestinationPort());
+							.setExact(MatchField.UDP_DST, udp.getDestinationPort());
 				} else {
 					// could be ICMP, which will be taken care of via IPv4 src/dst + ip proto
 				}
@@ -534,7 +540,7 @@ IFloodlightModule {
 	/*/**
 	 * Checks whether an IP address is a broadcast address or not (determines
 	 * using subnet mask)
-	 * 
+	 *
 	 * @param
 	 *            the IP address to check
 	 * @return true if it is a broadcast address, false otherwise
@@ -549,11 +555,14 @@ IFloodlightModule {
 		Ethernet eth = IFloodlightProviderService.bcStore.get(cntx, IFloodlightProviderService.CONTEXT_PI_PAYLOAD);
 		OFPort inPort = (pi.getVersion().compareTo(OFVersion.OF_12) < 0 ? pi.getInPort() : pi.getMatch().get(MatchField.IN_PORT));
 
-		/*logger.info("--------------------------INICIO DEL PACKET IN-----------------------");
+		logger.info("--------------------------INICIO DEL PACKET IN-----------------------");
 		logger.info("EL TAMAÑO DEL ARREGLO DE HOSTS CONECTADOS ES : "+conectados.size());
-		// Allowing L2 broadcast + ARP broadcast request (also deny malformed broadcasts -> L2 broadcast + L3 unicast)
 		logger.info("1.SERA DE BROADCAST MI PAQUETE?");
-		if (eth.isBroadcast() == true) {
+
+		//LINEA DE CODIGO QUE YA VINO CON EL CONTROLLER -> SE COMENTO E IGUAL SIGUE TRABAJANDO SIN PROBLEMAS
+
+		// Allowing L2 broadcast + ARP broadcast request (also deny malformed broadcasts -> L2 broadcast + L3 unicast)
+		/*if (eth.isBroadcast() == true) {
 			logger.info("2.TU TRAFICO ES DE BROADCAST. DONDE TU ETHERTYPE ES:"+eth.getEtherType().toString());
 			boolean allowBroadcast = true;
 			// the case to determine if we have L2 broadcast + L3 unicast (L3 broadcast default set to /24 or 255.255.255.0)
@@ -595,6 +604,7 @@ IFloodlightModule {
 
 		logger.info("5.TU TRAFICO NO ES DE BROADCAST.TIENE COMO ETHERTYPE:"+eth.getEtherType().toString());
 		boolean estaEnSesion = false;
+
 		if(!eth.getEtherType().equals(EthType.ARP) && eth.getEtherType().equals(EthType.IPv4)){
 			logger.info("6.TU TRAFICO NO ES DE ARP");
 
@@ -618,24 +628,21 @@ IFloodlightModule {
 			logger.info("7.SE HA DETECTADO UN HOST CON MAC: "+sourceMAC+" /DPID_SW: "+DPID_SW+" /PORT_SW: "+portSW+"/ IP:"+sourceIP);
 
 
-			if(sourceMAC.equals(MACController) && sourceIP.equals(IPv4Controller)){
-				logger.info("7.5.COMO EL SOURCE ES EL CONTROLADOR CON IP:"+sourceIP+" SE PERMITE TODO.ENTONCES SE HACE FORWARDING");
+
+			if(sourceMAC.equals(MACWebServer) || sourceMAC.equals(MACInformation) || sourceMAC.equals(MACPermissions)){
+				logger.info("7.5.COMO EL SOURCE ES EL UNO DE LOS SERVERS SE HACE FORWARDING.TIENE COMO IP:"+sourceIP);
 				RuleMatchPair rmp = this.matchWithRule(sw, pi, cntx);
 				FirewallRule rule = rmp.rule;
-				if (rule == null){
-					decision = new RoutingDecision(sw.getId(), inPort,
-							IDeviceService.fcStore.get(cntx, IDeviceService.CONTEXT_SRC_DEVICE),
-							IRoutingDecision.RoutingAction.FORWARD);
-					decision.setMatch(rmp.match);
-					decision.addToContext(cntx);
-				}
+				decision = new RoutingDecision(sw.getId(), inPort,
+						IDeviceService.fcStore.get(cntx, IDeviceService.CONTEXT_SRC_DEVICE),
+						IRoutingDecision.RoutingAction.MULTICAST);
+				decision.setMatch(rmp.match);
+				decision.addToContext(cntx);
 				logger.info("--------------------------------------------------------");
 				return Command.CONTINUE;
 			}
 
-
-
-			if(!ip.equals(IPv4WebServer) && !sourceMAC.equals(MACWebServer)){
+			if((!ip.equals(IPv4WebServer) || !ip.equals(IPv4WebServer2)) && !sourceMAC.equals(MACWebServer)){
 				if(!sesiones.isEmpty()){
 					for(ArrayList<Host> sess : sesiones.values()){
 						for(Host h3 : sess){
@@ -655,12 +662,9 @@ IFloodlightModule {
 			if(estaEnSesion){
 				//Esta en sesion el usuario
 				logger.info("8.EL HOST CON IP: "+sourceIP+" ESTA EN SESION .AHORA TENDRIAS QUE SETEARLES LAS REGLAS");
-				decision = new RoutingDecision(sw.getId(), inPort,
-						IDeviceService.fcStore.get(cntx, IDeviceService.CONTEXT_SRC_DEVICE),
-						IRoutingDecision.RoutingAction.NONE);
-				decision.addToContext(cntx);
 
 			}else{
+
 				//significa usuario nuevo o cerro sesion anteriomente por lo que no tiene una sesion activa -> no esta autenticado
 				if(!sourceMAC.equals(MACWebServer) && !sourceIP.equals(IPv4WebServer)){
 					boolean igual = false;
@@ -679,34 +683,30 @@ IFloodlightModule {
 
 
 				logger.info("EL TAMAÑO DEL ARREGLO DE HOSTS CONECTADOS ES : "+conectados.size());
-				if(ip.getProtocol().equals(IpProtocol.TCP)){
-					/*TCP tcp = (TCP) ip.getPayload();
-					logger.info("9.5. EL FLAG DEL TRAFICO TCP ES: "+tcp.getFlags());
-					if(sourceMAC.equals(MACWebServer) && sourceIP.equals(IPv4WebServer)){
-						logger.info("10.COMO EL SOURCE ES EL SERVIDOR WEB CON IP:"+sourceIP+" .ENTONCES SE HACE FORWARDING");
-						RuleMatchPair rmp = this.matchWithRule(sw, pi, cntx);
-						FirewallRule rule = rmp.rule;
-						decision = new RoutingDecision(sw.getId(), inPort,
-									IDeviceService.fcStore.get(cntx, IDeviceService.CONTEXT_SRC_DEVICE),
-									IRoutingDecision.RoutingAction.FORWARD);
-						decision.setMatch(rmp.match);
-						decision.addToContext(cntx);
-						logger.info("--------------------------------------------------------");
-						return Command.CONTINUE;
 
-					}else{
-						if((tcp.getFlags() == (short) 0x12) || (tcp.getFlags() == (short) 0x18) || (tcp.getFlags() == (short) 0x10) || (tcp.getFlags() == (short) 0x11)){
+				if(ip.getProtocol().equals(IpProtocol.TCP)){
+					TCP tcp = (TCP) ip.getPayload();
+					logger.info("9.5. EL FLAG DEL TRAFICO TCP ES: "+tcp.getFlags());
+
+					decision = new RoutingDecision(sw.getId(), inPort,
+							IDeviceService.fcStore.get(cntx, IDeviceService.CONTEXT_SRC_DEVICE),
+							IRoutingDecision.RoutingAction.MULTICAST);
+					decision.addToContext(cntx);
+					logger.info("--------------------------------------------------------");
+					return Command.CONTINUE;
+
+					/*if((tcp.getFlags() == (short) 0x12) || (tcp.getFlags() == (short) 0x18) || (tcp.getFlags() == (short) 0x10) || (tcp.getFlags() == (short) 0x11) || (tcp.getFlags() == (short) 0x02)){
 							RuleMatchPair rmp = this.matchWithRule(sw, pi, cntx);
 							FirewallRule rule = rmp.rule;
 							decision = new RoutingDecision(sw.getId(), inPort,
 									IDeviceService.fcStore.get(cntx, IDeviceService.CONTEXT_SRC_DEVICE),
-									IRoutingDecision.RoutingAction.FORWARD);
+									IRoutingDecision.RoutingAction.MULTICAST);
 							decision.setMatch(rmp.match);
 							decision.addToContext(cntx);
 							logger.info("--------------------------------------------------------");
 							return Command.CONTINUE;
-						}else{*/
-							/*//Detecto el destination Port
+					}else{
+							//Detecto el destination Port
 							int destPort = tcp.getDestinationPort().getPort(); //8080
 
 							//Detecto la MAC destino
@@ -727,21 +727,18 @@ IFloodlightModule {
 								logger.info("--------------------------------------------------------");
 								return Command.CONTINUE;
 
-							}else{*/
-					logger.info("12.COMO NO ES UN TRAFICO ACEPTADO DEL HOST CON IP:"+sourceIP+" AL SERVIDOR ENTONCES TU ACTION ES NONE");
-					RuleMatchPair rmp = this.matchWithRule(sw, pi, cntx);
-					FirewallRule rule = rmp.rule;
-					decision = new RoutingDecision(sw.getId(), inPort,
-							IDeviceService.fcStore.get(cntx, IDeviceService.CONTEXT_SRC_DEVICE),
-							IRoutingDecision.RoutingAction.NONE);
-					decision.setMatch(rmp.match);
-					decision.addToContext(cntx);
-					logger.info("--------------------------------------------------------");
-					return Command.CONTINUE;
-					/* }	*/
-
-
-						/*}
+							}else{
+								logger.info("12.COMO NO ES UN TRAFICO ACEPTADO DEL HOST CON IP:"+sourceIP+" AL SERVIDOR ENTONCES TU ACTION ES NONE");
+								RuleMatchPair rmp = this.matchWithRule(sw, pi, cntx);
+								FirewallRule rule = rmp.rule;
+								decision = new RoutingDecision(sw.getId(), inPort,
+									IDeviceService.fcStore.get(cntx, IDeviceService.CONTEXT_SRC_DEVICE),
+									IRoutingDecision.RoutingAction.NONE);
+								decision.setMatch(rmp.match);
+								decision.addToContext(cntx);
+								logger.info("--------------------------------------------------------");
+								return Command.CONTINUE;
+							}
 					}*/
 
 				}else{
@@ -759,16 +756,18 @@ IFloodlightModule {
 			}
 
 		}else{
-
 			if(eth.getEtherType().equals(EthType.ARP)){
 				logger.info("14.TU TRAFICO ES ARP Y TIENE COMO ETHERTYPE: "+eth.getEtherType());
 			}else{
 				logger.info("15.TU TRAFICO TIENE COMO ETHERTYPE: "+eth.getEtherType());
 			}
 
+			RuleMatchPair rmp = this.matchWithRule(sw, pi, cntx);
+			FirewallRule rule = rmp.rule;
 			decision = new RoutingDecision(sw.getId(), inPort,
 					IDeviceService.fcStore.get(cntx, IDeviceService.CONTEXT_SRC_DEVICE),
 					IRoutingDecision.RoutingAction.MULTICAST);
+			decision.setMatch(rmp.match);
 			decision.addToContext(cntx);
 
 			return Command.CONTINUE;
@@ -785,10 +784,10 @@ IFloodlightModule {
 		 * decision.addToContext(cntx); return Command.CONTINUE; }
 		 */
 
-		decision = new RoutingDecision(sw.getId(), inPort,
+		/*decision = new RoutingDecision(sw.getId(), inPort,
 				IDeviceService.fcStore.get(cntx, IDeviceService.CONTEXT_SRC_DEVICE),
 				IRoutingDecision.RoutingAction.MULTICAST);
-		decision.addToContext(cntx);
+		decision.addToContext(cntx);*/
 
 		// check if we have a matching rule for this packet/flow and no decision has been made yet
 		if (decision == null) {
