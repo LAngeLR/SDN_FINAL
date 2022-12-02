@@ -1,5 +1,6 @@
 package net.floodlightcontroller.firewall;
 
+import org.restlet.data.Status;
 import org.restlet.resource.Post;
 import org.restlet.resource.ServerResource;
 import org.slf4j.Logger;
@@ -20,8 +21,10 @@ public class FirewallRequestLogOffWebServerResource  extends ServerResource {
 
         try {
             firewallService.cerrarSesionHost(username,IP_user);
+            setStatus(Status.SUCCESS_OK);
             return "{\"Status\" : \"Sesion cerrada del host con exito!\"}";
         } catch (Exception e){
+            setStatus(Status.CLIENT_ERROR_BAD_REQUEST);
             return "{\"Status\" : \"An exception has ocurred!\"}";
         }
 
