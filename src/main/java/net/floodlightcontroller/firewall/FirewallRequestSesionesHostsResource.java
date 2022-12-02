@@ -43,6 +43,7 @@ public class FirewallRequestSesionesHostsResource extends ServerResource {
 
                     mensajeFinal = mensajeFinal + "}\n";
                     mensajeFinal = mensajeFinal + "\n";
+                    mensajeFinal = mensajeFinal + "        ";
                 }
 
             }
