@@ -26,7 +26,7 @@ public class FirewallRequestSesionesHostsResource extends ServerResource {
         for(String username : arregloDeUsernames){
             ArrayList<Host> listita = SS.get(username);
 
-            mensajeFinal = mensajeFinal + " "+ username + "[";
+            mensajeFinal = mensajeFinal + " \""+ username + "\":    [";
 
             if(listita.size() != 0){
                 for(Host h : listita){
@@ -35,11 +35,11 @@ public class FirewallRequestSesionesHostsResource extends ServerResource {
                     int port = h.getPortSW();
                     String DPID = h.getSW();
 
-                    mensajeFinal = mensajeFinal + "{";
-                    mensajeFinal =  mensajeFinal + "MAC: "+MAC+ ",\n";
-                    mensajeFinal = mensajeFinal + " IP: " + IP+ ",\n";
-                    mensajeFinal = mensajeFinal + " Port: "+ port+ ",\n";
-                    mensajeFinal = mensajeFinal + " DPID: "+ DPID+ "\n";
+                    mensajeFinal = mensajeFinal + "{\n";
+                    mensajeFinal =  mensajeFinal+"        "+"\"MAC\": \""+MAC+ "\",\n";
+                    mensajeFinal = mensajeFinal+"        "+"\"IP\": \"" + IP+ "\",\n";
+                    mensajeFinal = mensajeFinal+"        "+" \"Port\": \""+ port+ "\",\n";
+                    mensajeFinal = mensajeFinal+"        "+" \"DPID\": \""+ DPID+ "\"\n";
 
                     mensajeFinal = mensajeFinal + "}\n";
                     mensajeFinal = mensajeFinal + "\n";

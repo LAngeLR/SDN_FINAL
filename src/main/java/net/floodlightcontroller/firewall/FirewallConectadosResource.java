@@ -1,6 +1,7 @@
 package net.floodlightcontroller.firewall;
 
 import net.floodlightcontroller.core.types.Host;
+import org.restlet.data.Status;
 import org.restlet.resource.Get;
 import org.restlet.resource.ServerResource;
 
@@ -12,6 +13,5 @@ public class FirewallConectadosResource extends ServerResource {
     public List<Host> retrieve(){
         IFirewallService pihr = (IFirewallService) getContext().getAttributes().get(IFirewallService.class.getCanonicalName());
         return pihr.getBuffer();
-
     }
 }

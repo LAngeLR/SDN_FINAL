@@ -33,9 +33,11 @@ public class FirewallRequestWebServerResource extends ServerResource {
 
 
         try {
+            setStatus(Status.SUCCESS_OK);
             firewallService.agregarHostAutenticado(username,IP_user);
             return "{\"Status\" : \"Host autenticado actualizado con exito!\"}";
         } catch (Exception e){
+            setStatus(Status.CLIENT_ERROR_BAD_REQUEST);
             return "{\"Status\" : \"An exception has ocurred!\"}";
         }
 
