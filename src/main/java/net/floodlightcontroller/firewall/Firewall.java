@@ -51,7 +51,7 @@ public class Firewall implements IFirewallService, IOFMessageListener,
 	protected static Logger logger;
 	//-----------------------------------------------------------------------------------------------------------------
 	protected HashMap<String,ArrayList<Host>> sesiones;
-	protected HashMap<String,HashMap<String,ArrayList<Host>>> usernamePermisos;
+	protected HashMap<String,HashMap<String,ArrayList<String>>> usernamePermisos;
 	protected ArrayList<Host> conectados;
 
 	protected String MACWebServer = "fa:16:3e:70:45:ec";
@@ -65,6 +65,11 @@ public class Firewall implements IFirewallService, IOFMessageListener,
 	protected String MACPermissions = "fa:16:3e:e8:ef:11";
 	protected String MACInformation = "fa:16:3e:05:41:b6";
 
+
+	protected String MACDDOS = "fa:16:3e:54:4c:cb";
+
+
+	protected String MACFirewall = "fa:16:3e:61:30:36";
 	//-----------------------------------------------------------------------------------------------------------------
 
 	protected List<FirewallRule> rules; // protected by synchronized
@@ -554,8 +559,9 @@ public class Firewall implements IFirewallService, IOFMessageListener,
 
 			logger.info("7.SE HA DETECTADO UN HOST CON MAC: "+sourceMAC+" /DPID_SW: "+DPID_SW+" /PORT_SW: "+portSW+"/ IP:"+sourceIP);
 
-			//Aca permito todo trafico a los servers y al controller
-			if(sourceMAC.equals(MACWebServer) || sourceMAC.equals(MACInformation) || sourceMAC.equals(MACPermissions) || sourceMAC.equals(MACController)){
+			//Aca permito all trafic a los servers y al controller
+			if(sourceMAC.equals(MACWebServer) || sourceMAC.equals(MACInformation) || sourceMAC.equals(MACPermissions) || sourceMAC.equals(MACController)
+					|| sourceMAC.equals(MACDDOS) || sourceMAC.equals(MACFirewall)){
 				logger.info("7.5.COMO EL SOURCE ES EL UNO DE LOS SERVERS SE HACE FORWARDING.TIENE COMO IP:"+sourceIP);
 				RuleMatchPair rmp = this.matchWithRule(sw, pi, cntx);
 				FirewallRule rule = rmp.rule;
@@ -568,28 +574,161 @@ public class Firewall implements IFirewallService, IOFMessageListener,
 				return Command.CONTINUE;
 			}
 
-			//Verifico si esta en sesion o no
+			//Verifico si esta en sesion o no y de pasada si es que esta saco su username ,IP,MAC
+			ArrayList<String> usuario = new ArrayList<>();
 			if(!sesiones.isEmpty()){
-				for(ArrayList<Host> sess : sesiones.values()){
-					for(Host h3 : sess){
+				Set<String> usernamesSesiones = sesiones.keySet();
+				for(String usernames : usernamesSesiones){
+					ArrayList<Host> arrayHosts = sesiones.get(usernames);
+					for(Host h3 : arrayHosts){
 						if(h3.getIP().equals(sourceIP) && h3.getSW().equals(DPID_SW) && h3.getMAC().equals(sourceMAC) && (h3.getPortSW() == portSW)){
 							estaEnSesion = true;
+							usuario.add(usernames);
+							usuario.add(sourceIP);
+							usuario.add(sourceMAC);
 							break;
 						}
 					}
 				}
+
 			}
 
 			if(estaEnSesion){
-				//Esta en sesion el usuario
-				logger.info("8.EL HOST CON IP: "+sourceIP+" ESTA EN SESION .AHORA TENDRIAS QUE SETEARLES LAS REGLAS");
 				//R2
+				//Esta en sesion el usuario
+				logger.info("8.EL HOST CON IP: "+sourceIP+" ESTA EN SESION AHORA TENDRIAS QUE SETEARLES LAS REGLAS");
 
+				HashMap<String,ArrayList<String>> permisos = usernamePermisos.get(usuario.get(0));
 
+				if(ip.getProtocol().equals(IpProtocol.TCP)){
+					TCP tcp = (TCP) ip.getPayload();
+					String puerto = String.valueOf(tcp.getDestinationPort().getPort()); //puerto
 
+					//Vemos si tiene permisos para el protocolo
+					if(permisos.containsKey(puerto)){
+						ArrayList<String> ipsDestinoPermitidas = permisos.get(puerto);
+						String ipDestino = ip.getDestinationAddress().toString();
 
+						if(ipsDestinoPermitidas.contains(ipDestino)){
+							//Tiene permisos para hacer trafico a ese host
+							RuleMatchPair rmp = this.matchWithRule(sw, pi, cntx);
+							FirewallRule rule = rmp.rule;
+							decision = new RoutingDecision(sw.getId(), inPort,
+									IDeviceService.fcStore.get(cntx, IDeviceService.CONTEXT_SRC_DEVICE),
+									IRoutingDecision.RoutingAction.MULTICAST);
+							decision.setMatch(rmp.match);
+							decision.addToContext(cntx);
+							return Command.CONTINUE;
 
+						}else{
+							//Si el host que no tiene permisos inicia el trafico
+							if(tcp.getFlags() == (short) 0x02){
+								RuleMatchPair rmp = this.matchWithRule(sw, pi, cntx);
+								FirewallRule rule = rmp.rule;
+								decision = new RoutingDecision(sw.getId(), inPort,
+										IDeviceService.fcStore.get(cntx, IDeviceService.CONTEXT_SRC_DEVICE),
+										IRoutingDecision.RoutingAction.NONE);
+								decision.setMatch(rmp.match);
+								decision.addToContext(cntx);
+								return Command.CONTINUE;
 
+							}else{
+								//Si se quieren conectar a los hosts
+								RuleMatchPair rmp = this.matchWithRule(sw, pi, cntx);
+								FirewallRule rule = rmp.rule;
+								decision = new RoutingDecision(sw.getId(), inPort,
+										IDeviceService.fcStore.get(cntx, IDeviceService.CONTEXT_SRC_DEVICE),
+										IRoutingDecision.RoutingAction.MULTICAST);
+								decision.setMatch(rmp.match);
+								decision.addToContext(cntx);
+								return Command.CONTINUE;
+							}
+
+						}
+
+					}else{
+						//Si el host que no tiene permisos inicia el trafico
+						if(tcp.getFlags() == (short) 0x02){
+							RuleMatchPair rmp = this.matchWithRule(sw, pi, cntx);
+							FirewallRule rule = rmp.rule;
+							decision = new RoutingDecision(sw.getId(), inPort,
+									IDeviceService.fcStore.get(cntx, IDeviceService.CONTEXT_SRC_DEVICE),
+									IRoutingDecision.RoutingAction.NONE);
+							decision.setMatch(rmp.match);
+							decision.addToContext(cntx);
+							return Command.CONTINUE;
+
+						}else{
+							//Si se quieren conectar a los hosts
+							RuleMatchPair rmp = this.matchWithRule(sw, pi, cntx);
+							FirewallRule rule = rmp.rule;
+							decision = new RoutingDecision(sw.getId(), inPort,
+									IDeviceService.fcStore.get(cntx, IDeviceService.CONTEXT_SRC_DEVICE),
+									IRoutingDecision.RoutingAction.MULTICAST);
+							decision.setMatch(rmp.match);
+							decision.addToContext(cntx);
+							return Command.CONTINUE;
+						}
+
+					}
+
+				}else if(ip.getProtocol().equals(IpProtocol.UDP)){
+					UDP udp = (UDP) ip.getPayload();
+					String puertoUDP = String.valueOf(udp.getDestinationPort().getPort());
+
+					//En UDP no hay flags
+					if(permisos.containsKey(puertoUDP)){
+						ArrayList<String> ipsDestinoPermitidasUDP = permisos.get(puertoUDP);
+						String ipDestinoUDP = ip.getDestinationAddress().toString();
+
+						if(ipsDestinoPermitidasUDP.contains(ipDestinoUDP)){
+							//Tiene permisos para hacer trafico a ese host
+							RuleMatchPair rmp = this.matchWithRule(sw, pi, cntx);
+							FirewallRule rule = rmp.rule;
+							decision = new RoutingDecision(sw.getId(), inPort,
+									IDeviceService.fcStore.get(cntx, IDeviceService.CONTEXT_SRC_DEVICE),
+									IRoutingDecision.RoutingAction.MULTICAST);
+							decision.setMatch(rmp.match);
+							decision.addToContext(cntx);
+							return Command.CONTINUE;
+
+						}else{
+							//Si el host que no tiene permisos inicia el trafico
+							RuleMatchPair rmp = this.matchWithRule(sw, pi, cntx);
+							FirewallRule rule = rmp.rule;
+							decision = new RoutingDecision(sw.getId(), inPort,
+									IDeviceService.fcStore.get(cntx, IDeviceService.CONTEXT_SRC_DEVICE),
+									IRoutingDecision.RoutingAction.NONE);
+							decision.setMatch(rmp.match);
+							decision.addToContext(cntx);
+							return Command.CONTINUE;
+						}
+
+					}else{
+						//Si el host que no tiene permisos inicia el trafico
+						RuleMatchPair rmp = this.matchWithRule(sw, pi, cntx);
+						FirewallRule rule = rmp.rule;
+						decision = new RoutingDecision(sw.getId(), inPort,
+								IDeviceService.fcStore.get(cntx, IDeviceService.CONTEXT_SRC_DEVICE),
+								IRoutingDecision.RoutingAction.NONE);
+						decision.setMatch(rmp.match);
+						decision.addToContext(cntx);
+						return Command.CONTINUE;
+
+					}
+
+				//Si no es ni TCP -ICMP - UDP , se dropea
+				}else{
+					RuleMatchPair rmp = this.matchWithRule(sw, pi, cntx);
+					FirewallRule rule = rmp.rule;
+					decision = new RoutingDecision(sw.getId(), inPort,
+							IDeviceService.fcStore.get(cntx, IDeviceService.CONTEXT_SRC_DEVICE),
+							IRoutingDecision.RoutingAction.NONE);
+					decision.setMatch(rmp.match);
+					decision.addToContext(cntx);
+					logger.info("--------------------------------------------------------");
+					return Command.CONTINUE;
+				}
 
 			}else{
 				//Significa usuario nuevo o cerro sesion anteriomente por lo que no tiene una sesion activa -> no esta autenticado
@@ -686,8 +825,6 @@ public class Firewall implements IFirewallService, IOFMessageListener,
 			return Command.CONTINUE;
 		}
 
-		logger.info("--------------------------FIN DEL PACKET IN-----------------------");
-		return Command.CONTINUE;
 	}
 
 	@Override
@@ -787,12 +924,12 @@ public class Firewall implements IFirewallService, IOFMessageListener,
 
 
 	@Override
-	public void agregarPermisosUsername(String username, HashMap<String, ArrayList<Host>> permisos) {
+	public void agregarPermisosUsername(String username, HashMap<String, ArrayList<String>> permisos) {
 		usernamePermisos.put(username,permisos);
 	}
 
 	@Override
-	public void actualizarPermisosUsername(String username, HashMap<String, ArrayList<Host>> permisos) {
+	public void actualizarPermisosUsername(String username, HashMap<String, ArrayList<String>> permisos) {
 		usernamePermisos.put(username,permisos);
 	}
 

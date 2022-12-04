@@ -78,9 +78,9 @@ public interface IFirewallService extends IFloodlightService {
 
     public void agregarHostAutenticado(String username,String IP);
 
-    public void agregarPermisosUsername(String username,HashMap<String,ArrayList<Host>> permisos);
+    public void agregarPermisosUsername(String username,HashMap<String,ArrayList<String>> permisos);
 
-    public void actualizarPermisosUsername(String username,HashMap<String,ArrayList<Host>> permisos);
+    public void actualizarPermisosUsername(String username,HashMap<String,ArrayList<String>> permisos);
 
     public void cerrarSesionHost(String username,String IP);
 

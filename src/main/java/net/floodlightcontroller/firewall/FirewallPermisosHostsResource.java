@@ -24,7 +24,7 @@ public class FirewallPermisosHostsResource extends ServerResource {
         IFirewallService firewallService = (IFirewallService)getContext().getAttributes().get(IFirewallService.class.getCanonicalName());
 
         String username = (String) getRequestAttributes().get("username");
-        HashMap<String, ArrayList<Host>> permisos = new HashMap<>();
+        HashMap<String, ArrayList<String>> permisos = new HashMap<>();
 
         logger.info("SE HIZO UN REQUEST PARA SETEARLE LOS PERMISOS AL USERNAME: "+username);
 
@@ -57,8 +57,34 @@ public class FirewallPermisosHostsResource extends ServerResource {
                 if (jp.getText().equals("")) {
                     continue;
                 }else{
-                    ArrayList<Host> ipsResource = new ArrayList<>();
+                    ArrayList<String> ipsResource = new ArrayList<>();
                     logger.info("PERMISOS: "+jp.getText());
+
+                    String listasResultadoStr = jp.getText();
+                    listasResultadoStr = listasResultadoStr.replace("[","");
+                    listasResultadoStr = listasResultadoStr.replace("]","");
+
+                    String[] listaIps = null;
+
+                    if(listasResultadoStr.contains(",")){
+                        listaIps = listasResultadoStr.split(",");
+
+                    }else{
+                        listaIps = new String[1];
+                        listaIps[0] = listasResultadoStr;
+                    }
+
+                    for(int i=0; i < listaIps.length;i++){
+                        String ipStr = listaIps[i];
+
+                        String ip = ipStr.replace("'","");
+
+                        logger.info("IP A GUARDAR: "+ip);
+
+                        ipsResource.add(ip);
+                    }
+
+                    permisos.put(name,ipsResource);
                 }
 
 

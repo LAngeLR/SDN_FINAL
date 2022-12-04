@@ -23,7 +23,7 @@ public class FirewallPermisosActualizarHostsResource extends ServerResource {
         IFirewallService firewallService = (IFirewallService)getContext().getAttributes().get(IFirewallService.class.getCanonicalName());
 
         String username = (String) getRequestAttributes().get("username");
-        HashMap<String, ArrayList<Host>> permisos = new HashMap<>();
+        HashMap<String, ArrayList<String>> permisos = new HashMap<>();
 
         MappingJsonFactory f = new MappingJsonFactory();
         JsonParser jp;
@@ -54,7 +54,7 @@ public class FirewallPermisosActualizarHostsResource extends ServerResource {
                 if (jp.getText().equals("")) {
                     continue;
                 }else{
-                    ArrayList<Host> ipsResource = new ArrayList<>();
+                    ArrayList<String> ipsResource = new ArrayList<>();
 
                     String listasResultadoStr = jp.getText();
                     listasResultadoStr = listasResultadoStr.replace("[","");
@@ -74,10 +74,7 @@ public class FirewallPermisosActualizarHostsResource extends ServerResource {
                         String ipStr = listaIps[i];
 
                         String ip = ipStr.replace("'","");
-                        Host host = new Host();
-                        host.setIP(ip);
-
-                        ipsResource.add(host);
+                        ipsResource.add(ip);
                     }
 
                     permisos.put(nameResource,ipsResource);
