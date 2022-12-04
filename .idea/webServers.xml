@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="WebServers">
+    <option name="servers">
+      <webServer id="c86c86ae-6275-4bb4-b767-0f38e2e7068d" name="sdn">
+        <fileTransfer rootFolder="/home/ubuntu/SDN-G4-Proyect-master" accessType="SFTP" host="10.20.12.48" port="5802" sshConfigId="e4990b04-1f5e-475f-bcea-97938ecb4cb2" sshConfig="ubuntu@10.20.12.48:5802 password">
+          <advancedOptions>
+            <advancedOptions dataProtectionLevel="Private" keepAliveTimeout="0" passiveMode="true" shareSSLContext="true" />
+          </advancedOptions>
+        </fileTransfer>
+      </webServer>
+    </option>
+  </component>
+</project>
