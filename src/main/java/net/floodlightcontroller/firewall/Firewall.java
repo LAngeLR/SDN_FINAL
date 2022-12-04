@@ -769,6 +769,11 @@ public class Firewall implements IFirewallService, IOFMessageListener,
 
 		cuentas.remove(indecito);
 
+		//Si ya no hay hosts con dicho username entonces me borro los permisos guardados
+		if(cuentas.size() == 0){
+			usernamePermisos.remove(username);
+		}
+
 		sesiones.put(username,cuentas);
 
 		logger.info("EL HOST CON USERNAME: "+username+" HA CERRADO SESION");
@@ -783,6 +788,12 @@ public class Firewall implements IFirewallService, IOFMessageListener,
 
 	@Override
 	public void agregarPermisosUsername(String username, HashMap<String, ArrayList<Host>> permisos) {
-
+		usernamePermisos.put(username,permisos);
 	}
+
+	@Override
+	public void actualizarPermisosUsername(String username, HashMap<String, ArrayList<Host>> permisos) {
+		usernamePermisos.put(username,permisos);
+	}
+
 }
