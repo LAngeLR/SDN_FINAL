@@ -53,6 +53,7 @@ public class Firewall implements IFirewallService, IOFMessageListener,
 	protected HashMap<String,ArrayList<Host>> sesiones;
 	protected HashMap<String,HashMap<String,ArrayList<String>>> usernamePermisos;
 	protected ArrayList<Host> conectados;
+	protected ArrayList<Host> consultaR3;
 
 	protected String MACWebServer = "fa:16:3e:70:45:ec";
 	protected String IPv4WebServer = "10.0.0.101";
@@ -274,6 +275,8 @@ public class Firewall implements IFirewallService, IOFMessageListener,
 		//------------------------------------------------------------------------------------------------------------------------
 		sesiones = new HashMap<>();
 		conectados = new ArrayList<>();
+		usernamePermisos = new HashMap<>();
+		consultaR3 = new ArrayList<>();
 		//------------------------------------------------------------------------------------------------------------------------
 
 		// start disabled
@@ -534,11 +537,11 @@ public class Firewall implements IFirewallService, IOFMessageListener,
 		Ethernet eth = IFloodlightProviderService.bcStore.get(cntx, IFloodlightProviderService.CONTEXT_PI_PAYLOAD);
 		OFPort inPort = (pi.getVersion().compareTo(OFVersion.OF_12) < 0 ? pi.getInPort() : pi.getMatch().get(MatchField.IN_PORT));
 
-		logger.info("--------------------------INICIO DEL PACKET IN-----------------------");
+		//logger.info("--------------------------INICIO DEL PACKET IN-----------------------");
 		boolean estaEnSesion = false;
 
 		if(!eth.getEtherType().equals(EthType.ARP) && eth.getEtherType().equals(EthType.IPv4)){
-			logger.info("6.TU TRAFICO NO ES DE ARP");
+			//logger.info("6.TU TRAFICO NO ES DE ARP");
 
 			IPv4 ip = (IPv4) eth.getPayload();
 
@@ -581,7 +584,7 @@ public class Firewall implements IFirewallService, IOFMessageListener,
 				for(String usernames : usernamesSesiones){
 					ArrayList<Host> arrayHosts = sesiones.get(usernames);
 					for(Host h3 : arrayHosts){
-						if(h3.getIP().equals(sourceIP) && h3.getSW().equals(DPID_SW) && h3.getMAC().equals(sourceMAC) && (h3.getPortSW() == portSW)){
+						if(h3.getIP().equals(sourceIP) &&  h3.getMAC().equals(sourceMAC)){
 							estaEnSesion = true;
 							usuario.add(usernames);
 							usuario.add(sourceIP);
@@ -596,9 +599,8 @@ public class Firewall implements IFirewallService, IOFMessageListener,
 			if(estaEnSesion){
 				//R2
 				//Esta en sesion el usuario
-				logger.info("8.EL HOST CON IP: "+sourceIP+" ESTA EN SESION AHORA TENDRIAS QUE SETEARLES LAS REGLAS");
-
 				HashMap<String,ArrayList<String>> permisos = usernamePermisos.get(usuario.get(0));
+				logger.info("8.EL HOST CON IP: "+sourceIP+" ESTA EN SESION Y TIENE COMO USERNAME: "+usuario.get(0));
 
 				if(ip.getProtocol().equals(IpProtocol.TCP)){
 					TCP tcp = (TCP) ip.getPayload();
@@ -606,11 +608,15 @@ public class Firewall implements IFirewallService, IOFMessageListener,
 
 					//Vemos si tiene permisos para el protocolo
 					if(permisos.containsKey(puerto)){
+						logger.info("8.1. EL HOST "+usuario.get(0)+ "TIENE PERMISOS EN EL PUERTO: "+puerto);
+
 						ArrayList<String> ipsDestinoPermitidas = permisos.get(puerto);
 						String ipDestino = ip.getDestinationAddress().toString();
 
 						if(ipsDestinoPermitidas.contains(ipDestino)){
 							//Tiene permisos para hacer trafico a ese host
+							logger.info("8.1. EL HOST "+usuario.get(0)+ "TIENE PERMISOS HACIA LA IP: "+ipDestino);
+
 							RuleMatchPair rmp = this.matchWithRule(sw, pi, cntx);
 							FirewallRule rule = rmp.rule;
 							decision = new RoutingDecision(sw.getId(), inPort,
@@ -623,6 +629,7 @@ public class Firewall implements IFirewallService, IOFMessageListener,
 						}else{
 							//Si el host que no tiene permisos inicia el trafico
 							if(tcp.getFlags() == (short) 0x02){
+								logger.info("8.1. EL HOST "+usuario.get(0)+ "INICIA TCP Y NO TIENE PERMISOS HACIA LA IP: "+ipDestino);
 								RuleMatchPair rmp = this.matchWithRule(sw, pi, cntx);
 								FirewallRule rule = rmp.rule;
 								decision = new RoutingDecision(sw.getId(), inPort,
@@ -634,6 +641,8 @@ public class Firewall implements IFirewallService, IOFMessageListener,
 
 							}else{
 								//Si se quieren conectar a los hosts
+								logger.info("8.1. EL HOST DE RECEPCION ACEPTA TRAFICO TCP");
+
 								RuleMatchPair rmp = this.matchWithRule(sw, pi, cntx);
 								FirewallRule rule = rmp.rule;
 								decision = new RoutingDecision(sw.getId(), inPort,
@@ -649,6 +658,7 @@ public class Firewall implements IFirewallService, IOFMessageListener,
 					}else{
 						//Si el host que no tiene permisos inicia el trafico
 						if(tcp.getFlags() == (short) 0x02){
+							logger.info("8.1. EL HOST "+usuario.get(0)+ "NO TIENE EL PUERTO PERMITIDO ,PUERTO: "+puerto);
 							RuleMatchPair rmp = this.matchWithRule(sw, pi, cntx);
 							FirewallRule rule = rmp.rule;
 							decision = new RoutingDecision(sw.getId(), inPort,
@@ -660,6 +670,7 @@ public class Firewall implements IFirewallService, IOFMessageListener,
 
 						}else{
 							//Si se quieren conectar a los hosts
+							logger.info("8.1. EL HOST DE RECEPCION ACEPTA TRAFICO TCP");
 							RuleMatchPair rmp = this.matchWithRule(sw, pi, cntx);
 							FirewallRule rule = rmp.rule;
 							decision = new RoutingDecision(sw.getId(), inPort,
@@ -717,7 +728,19 @@ public class Firewall implements IFirewallService, IOFMessageListener,
 
 					}
 
-				//Si no es ni TCP -ICMP - UDP , se dropea
+					//Si es ICMP
+				}else if(ip.getProtocol().equals(IpProtocol.ICMP)){
+					RuleMatchPair rmp = this.matchWithRule(sw, pi, cntx);
+					FirewallRule rule = rmp.rule;
+					decision = new RoutingDecision(sw.getId(), inPort,
+							IDeviceService.fcStore.get(cntx, IDeviceService.CONTEXT_SRC_DEVICE),
+							IRoutingDecision.RoutingAction.MULTICAST);
+					decision.setMatch(rmp.match);
+					decision.addToContext(cntx);
+					//logger.info("--------------------------------------------------------");
+					return Command.CONTINUE;
+
+					//Si no es ni TCP -ICMP - UDP , se dropea
 				}else{
 					RuleMatchPair rmp = this.matchWithRule(sw, pi, cntx);
 					FirewallRule rule = rmp.rule;
@@ -726,7 +749,7 @@ public class Firewall implements IFirewallService, IOFMessageListener,
 							IRoutingDecision.RoutingAction.NONE);
 					decision.setMatch(rmp.match);
 					decision.addToContext(cntx);
-					logger.info("--------------------------------------------------------");
+					//logger.info("--------------------------------------------------------");
 					return Command.CONTINUE;
 				}
 
@@ -741,10 +764,11 @@ public class Firewall implements IFirewallService, IOFMessageListener,
 					}
 				}
 				if(!igual){
-					logger.info("9.HOST CON IP:"+sourceIP+" AÑADIDO");
+					//logger.info("9.HOST CON IP:"+sourceIP+" AÑADIDO");
 					conectados.add(host);
+					consultaR3.add(host);
 				}
-				logger.info("EL TAMAÑO DEL ARREGLO DE HOSTS CONECTADOS ES : "+conectados.size());
+				//logger.info("EL TAMAÑO DEL ARREGLO DE HOSTS CONECTADOS ES : "+conectados.size());
 
 				//Si el trafico es TCP
 				if(ip.getProtocol().equals(IpProtocol.TCP)){
@@ -789,12 +813,12 @@ public class Firewall implements IFirewallService, IOFMessageListener,
 								IRoutingDecision.RoutingAction.MULTICAST);
 						decision.setMatch(rmp.match);
 						decision.addToContext(cntx);
-						logger.info("--------------------------------------------------------");
+						//logger.info("--------------------------------------------------------");
 						return Command.CONTINUE;
 					}
 
 					//Si no es TCP ni ICMP se dropea
-					logger.info("13.TU TRAFICO NO ES TCP NI ICMP POR LO QUE TU ACTION ES NONE OSEA TIPO DROP.EL HOST CON IP: "+sourceIP);
+					//logger.info("13.TU TRAFICO NO ES TCP NI ICMP POR LO QUE TU ACTION ES NONE OSEA TIPO DROP.EL HOST CON IP: "+sourceIP);
 					RuleMatchPair rmp = this.matchWithRule(sw, pi, cntx);
 					FirewallRule rule = rmp.rule;
 					decision = new RoutingDecision(sw.getId(), inPort,
@@ -809,9 +833,9 @@ public class Firewall implements IFirewallService, IOFMessageListener,
 
 		}else{
 			if(eth.getEtherType().equals(EthType.ARP)){
-				logger.info("14.TU TRAFICO ES ARP Y TIENE COMO ETHERTYPE: "+eth.getEtherType());
+				//logger.info("14.TU TRAFICO ES ARP Y TIENE COMO ETHERTYPE: "+eth.getEtherType());
 			}else{
-				logger.info("15.TU TRAFICO TIENE COMO ETHERTYPE: "+eth.getEtherType());
+				//logger.info("15.TU TRAFICO TIENE COMO ETHERTYPE: "+eth.getEtherType());
 			}
 
 			RuleMatchPair rmp = this.matchWithRule(sw, pi, cntx);
@@ -830,6 +854,12 @@ public class Firewall implements IFirewallService, IOFMessageListener,
 	@Override
 	public ArrayList<Host> getBuffer() {
 		return conectados;
+	}
+
+
+	@Override
+	public ArrayList<Host> getR3Conectados() {
+		return consultaR3;
 	}
 
 	@Override
